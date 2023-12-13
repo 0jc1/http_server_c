@@ -1,4 +1,4 @@
-nclude <stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -11,7 +11,6 @@ void handle_request(int client_socket) {
     char buffer[BUFFER_SIZE] = {0};
     read(client_socket, buffer, BUFFER_SIZE - 1);
 
-    printf("Connection accepted from %s:%d\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
 
     // Process the HTTP request (you can customize this part)
     const char *response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello, World!\r\n";
@@ -65,4 +64,3 @@ int main() {
 
     return 0;
 }
-
