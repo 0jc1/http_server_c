@@ -8,11 +8,14 @@ Very basic and small HTTP server coded in posix C. The motivation behind this pr
 
 ## Usage
 Compile
--- make all
+```
+make all
+```
 
 Execute on port 8080
--- ./server 8080
-
+```
+./server 8080
+```
 ## References
 
 https://notes.eatonphil.com/web-server-basics-http-and-sockets.html
