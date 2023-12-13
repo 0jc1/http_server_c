@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-#define PORT 8080
+#define PORT 8080 // default port
 #define BUFFER_SIZE 1024
 
 void handle_request(int client_socket) {
@@ -12,17 +12,30 @@ void handle_request(int client_socket) {
     read(client_socket, buffer, BUFFER_SIZE - 1);
 
 
-    // Process the HTTP request (you can customize this part)
+    // Process the HTTP request
     const char *response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello, World!\r\n";
     write(client_socket, response, strlen(response));
 
     close(client_socket);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    int port = PORT;
+
+    // Parse the port number from the command-line argument
+    if (argc >= 2) {
+         port = atoi(argv[1]);
+    } 
+
+    if (port <= 0 || port > 65535) {
+        printf("Invalid port number: %s\n", argv[1]);
+        return 1; // Return an error code
+    }
+
     int server_socket, client_socket;
     struct sockaddr_in server_address, client_address;
     socklen_t address_len = sizeof(server_address);
+    int backlog = 5;
 
     // Create socket
     if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
@@ -32,7 +45,7 @@ int main() {
 
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = INADDR_ANY;
-    server_address.sin_port = htons(PORT);
+    server_address.sin_port = htons(port);
 
     // Bind the socket
     if (bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
@@ -41,13 +54,12 @@ int main() {
     }
 
     // Listen for incoming connections
-    if (listen(server_socket, 3) < 0) {
+    if (listen(server_socket, backlog) < 0) {
         perror("Listen failed");
         exit(EXIT_FAILURE);
     }
 
-    printf("Server listening on port %d...\n", PORT);
-
+    printf("Server listening on 127.0.0.1:%d...\n", PORT);
 
     while (1) {
         // Accept incoming connection
