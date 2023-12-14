@@ -1,4 +1,3 @@
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -7,11 +6,8 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
-
-
 #include <sys/stat.h>
 #include <sys/types.h>
-
 #include <time.h>
 
 #define PORT 8080 // default port
@@ -39,55 +35,60 @@ struct MimeType
     {"html", "text/html"},
 };
 
-void logMessage(int level, const char *format, ...) {
-    va_list args;
-    va_start(args, format);
+void logMessage(const char *format, ...)
+{
+    va_list arg;
+    va_start(arg, format);
 
-    char timestamp[20];
-    time_t t;
-    struct tm *tm_info;
+    va_list argCopy;
+    va_copy(argCopy, arg);
 
-    time(&t);
-    tm_info = localtime(&t);
-    strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", tm_info);
-
-    const char *levelString = NULL;
-    switch (level) {
-        case LOG_INFO:
-            levelString = "INFO";
-            break;
-        case LOG_WARNING:
-            levelString = "WARNING";
-            break;
-        case LOG_ERROR:
-            levelString = "ERROR";
-            break;
-        default:
-            levelString = "UNKNOWN";
+    int len = vsnprintf(NULL, 0, format, argCopy);
+    va_end(argCopy);
+    
+    if (len < 0)
+    {
+        return;
     }
 
-    int logFile = open("server.log", O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
-    if (logFile == -1) {
-        perror("Error opening log file");
-        va_end(args);
-        exit(EXIT_FAILURE);
+    char buf[len + 1];
+    len = vsnprintf(buf, sizeof buf, format, arg);
+    if (len < 0)
+    {
+        return;
     }
 
-    dprintf(logFile, "[%s] [%s] ", timestamp, levelString);
-    vdprintf(logFile, format, args);
-    dprintf(logFile, "\n");
+    time_t t = time(NULL);
+    if (t == -1)
+    {
+        return;
+    }
+    struct tm *tm = localtime(&t);
+    if (tm == NULL)
+    {
+        return;
+    }
+    printf("%02d:%02d:%02d ", tm->tm_hour, tm->tm_min, tm->tm_sec);
 
-    // Print to console
-    printf("[%s] [%s] ", timestamp, levelString);
-    vprintf(format, args);
-    printf("\n");
+    printf("%s\n", buf);
 
-    close(logFile);
+    int fd = open("server.log", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 
-    va_end(args);
+    if (fd == -1)
+    {
+        perror("Error opening file");
+        return;
+    }
+
+    ssize_t bytesWritten = write(fd, buf, strlen(buf));
+    if (bytesWritten == -1) {
+        perror("Error writing to file");
+        
+    }
+
+    // Close the log file
+    close(fd);
 }
-
-
 
 // Function to get MIME type based on file extension
 const char *getMimeType(const char *fileExtension, size_t numMimeTypes)
@@ -102,21 +103,20 @@ const char *getMimeType(const char *fileExtension, size_t numMimeTypes)
     return "application/octet-stream"; // Default MIME type for unknown or binary files
 }
 
-
 void handle_request(int client_socket)
 {
     char buffer[BUFFER_SIZE] = {0};
 
-    long ret = read(client_socket, buffer, BUFFER_SIZE - 1); 
+    long ret = read(client_socket, buffer, BUFFER_SIZE - 1);
 
     if (ret == 0 || ret == -1)
     {
-        logMessage(LOG_WARNING,"failed to read browser request");
+        logMessage("failed to read browser request");
     }
 
     if (ret > 0 && ret < BUFFER_SIZE)
-    {                    
-        buffer[ret] = 0; 
+    {
+        buffer[ret] = 0;
     }
     else
     {
@@ -124,18 +124,18 @@ void handle_request(int client_socket)
     }
 
     for (size_t i = 0; i < ret; i++)
-    { // remove CF and LF characters 
+    { // remove CF and LF characters
         if (buffer[i] == '\r' || buffer[i] == '\n')
         {
             buffer[i] = '*';
         }
     }
 
-    logMessage(LOG_INFO,"read request");
+    logMessage("read request");
 
     if (strncmp(buffer, "GET ", 4) && strncmp(buffer, "get ", 4))
     {
-        //   log_warning("Only simple GET operation supported");
+        logMessage("Only simple GET operation supported");
     }
 
     // Process the HTTP request
@@ -144,7 +144,6 @@ void handle_request(int client_socket)
 
     close(client_socket);
 }
-
 
 int main(int argc, char *argv[])
 {
@@ -202,7 +201,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    logMessage(LOG_INFO,"Server listening on 127.0.0.1:%d...\n", port);
+    logMessage("Server listening on 127.0.0.1:%d...\n", port);
 
     while (1)
     {
@@ -213,7 +212,7 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
 
-        logMessage(LOG_INFO,"Connection accepted from %s:%d\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
+        logMessage("Connection accepted from %s:%d\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
 
         // Handle the HTTP request
         handle_request(client_socket);
