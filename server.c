@@ -45,7 +45,7 @@ void logMessage(const char *format, ...)
 
     int len = vsnprintf(NULL, 0, format, argCopy);
     va_end(argCopy);
-    
+
     if (len < 0)
     {
         return;
@@ -81,9 +81,9 @@ void logMessage(const char *format, ...)
     }
 
     ssize_t bytesWritten = write(fd, buf, strlen(buf));
-    if (bytesWritten == -1) {
+    if (bytesWritten == -1)
+    {
         perror("Error writing to file");
-        
     }
 
     // Close the log file
@@ -136,6 +136,15 @@ void handle_request(int client_socket)
     if (strncmp(buffer, "GET ", 4) && strncmp(buffer, "get ", 4))
     {
         logMessage("Only simple GET operation supported");
+    }
+
+    for (i = 4; i < BUFFER_SIZE; i++)
+    { // null terminate after the second space to ignore extra stuff 
+        if (buffer[i] == ' ')
+        { 
+            buffer[i] = 0;
+            break;
+        }
     }
 
     // Process the HTTP request
