@@ -1,0 +1,21 @@
+
+18:44:22 Server listening on 127.0.0.1:8080...
+18:44:25 Connection accepted from 127.0.0.1:53988
+18:44:25 read reques
+18:44:25 file extension type not supporte
+18:44:25 failed to open file index.htm
+18:44:25 SEN
+18:44:26 Connection accepted from 127.0.0.1:53996
+18:44:27 read reques
+18:44:27 file extension type not supporte
+18:44:27 failed to open file favicon.ic
+18:44:27 SEN
+18:46:40 Server listening on 127.0.0.1:8080...
+18:46:42 Connection accepted from 127.0.0.1:36878
+18:46:42 read reques
+18:46:42 failed to open file index.htm
+18:46:42 SEN
+18:46:43 Connection accepted from 127.0.0.1:36886
+18:46:43 read reques
+18:46:43 failed to open file favicon.ic
+18:46:44 SEN

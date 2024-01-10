@@ -162,9 +162,10 @@ void handle_request(int client_socket)
     int buflen = strlen(buffer);
     long len;
     char* fstr = (char *)0;
+
     for (i = 0; mimeTypes[i].extension != 0; i++)
     {
-        len = strlen(mimeTypes[i].extension)+1;
+        len = strlen(mimeTypes[i].extension);
         if (!strncmp(&buffer[buflen - len], mimeTypes[i].extension, len))
         {
             fstr = mimeTypes[i].type;
