@@ -10,12 +10,9 @@
 #include <sys/types.h>
 #include <time.h>
 
+#define VERSION 23
 #define PORT 8080 // default port
 #define BUFFER_SIZE 8096
-
-#define LOG_INFO 0
-#define LOG_WARNING 1
-#define LOG_ERROR 2
 
 struct MimeType
 {
@@ -51,7 +48,7 @@ void logMessage(const char *format, ...)
         return;
     }
 
-    char buf[len + 20];
+    char buf[len];
     len = vsnprintf(buf, sizeof buf, format, arg);
     if (len < 0)
     {
@@ -68,14 +65,13 @@ void logMessage(const char *format, ...)
     {
         return;
     }
-    char time_str[sizeof(buf)+10];  // Assuming HH:MM:SS format
+    char time_str[sizeof(buf) + 10]; // Assuming HH:MM:SS format
     sprintf(time_str, "%02d:%02d:%02d ", tm->tm_hour, tm->tm_min, tm->tm_sec);
     strcat(time_str, buf);
 
-
     printf("%s\n", time_str);
 
-    int fd = open("server.log", O_WRONLY | O_APPEND | O_CREAT, S_IRUSR | S_IWUSR);
+    int fd = open("server.log", O_WRONLY | O_APPEND | O_CREAT | O_NONBLOCK, S_IRUSR | S_IWUSR);
 
     if (fd == -1)
     {
@@ -109,12 +105,13 @@ const char *getMimeType(const char *fileExtension, size_t numMimeTypes)
 void handle_request(int client_socket)
 {
     char buffer[BUFFER_SIZE] = {0};
+    size_t i = 0;
 
     long ret = read(client_socket, buffer, BUFFER_SIZE - 1);
 
     if (ret == 0 || ret == -1)
     {
-        logMessage("failed to read browser request");
+        logMessage("failed to read client request");
     }
 
     if (ret > 0 && ret < BUFFER_SIZE)
@@ -126,7 +123,7 @@ void handle_request(int client_socket)
         buffer[0] = 0;
     }
 
-    for (size_t i = 0; i < ret; i++)
+    for (i = 0; i < ret; i++)
     { // remove CF and LF characters
         if (buffer[i] == '\r' || buffer[i] == '\n')
         {
@@ -139,10 +136,11 @@ void handle_request(int client_socket)
     if (strncmp(buffer, "GET ", 4) && strncmp(buffer, "get ", 4))
     {
         logMessage("Only simple GET operation supported");
+        return;
     }
 
-    for (size_t i = 4; i < BUFFER_SIZE; i++)
-    { //null terminate after the second space to ignore extra stuff
+    for (i = 4; i < BUFFER_SIZE; i++)
+    { // null terminate after the second space to ignore extra stuff
         if (buffer[i] == ' ')
         {
             buffer[i] = 0;
@@ -150,9 +148,46 @@ void handle_request(int client_socket)
         }
     }
 
-    // Process the HTTP request
-    const char *response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello, World!\r\n";
-    write(client_socket, response, strlen(response));
+    for (j = 0; j < i - 1; j++) /* check for illegal parent directory use .. */
+        if (buffer[j] == '.' && buffer[j + 1] == '.')
+        {
+            logMessage("Parent directory (..) path names not supported");
+        }
+    if (!strncmp(&buffer[0], "GET /\0", 6) || !strncmp(&buffer[0], "get /\0", 6)) /* convert no filename to index file */
+        (void)strcpy(buffer, "GET /index.html");
+
+    /* work out the file type and check we support it */
+    int buflen = strlen(buffer);
+    int fstr = (char *)0;
+    for (i = 0; mimeTypes[i].extension != 0; i++)
+    {
+        len = strlen(mimeTypes[i].extension);
+        if (!strncmp(&buffer[buflen - len], mimeTypes[i].extension, len))
+        {
+            fstr = mimeTypes[i].type;
+            break;
+        }
+    }
+    if (fstr == 0)
+        logMessage("file extension type not supported", buffer, fd);
+
+    if ((file_fd = open(&buffer[5], O_RDONLY)) == -1)
+    { /* open the file for reading */
+        logMessage("failed to open file %s", &buffer[5]);
+    }
+    logMessage("SEND");
+    len = (long)lseek(file_fd, (off_t)0, SEEK_END);                                                                                                /* lseek to the file end to find the length */
+    lseek(file_fd, (off_t)0, SEEK_SET);                                                                                                      /* lseek back to the file start ready for reading */
+    sprintf(buffer, "HTTP/1.1 200 OK\nServer: nweb/%d.0\nContent-Length: %ld\nConnection: close\nContent-Type: %s\n\n", VERSION, len, fstr); /* Header + a blank line */
+    //logMessage("Header", buffer, hit);
+    write(client_socket, buffer, strlen(buffer));
+
+    /* send file in 8KB block - last block may be smaller */
+    while ((ret = read(file_fd, buffer, BUFFER_SIZE)) > 0)
+    {
+        (void)write(fd, buffer, ret);
+    }
+    sleep(1); /* allow socket to drain before signalling the socket is closed */
 
     close(client_socket);
 }
@@ -186,7 +221,7 @@ int main(int argc, char *argv[])
     int server_socket, client_socket;
     struct sockaddr_in server_address, client_address;
     socklen_t address_len = sizeof(server_address);
-    int backlog = 64;
+    // int backlog = 64;
 
     // Create network socket
     if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0)
@@ -207,7 +242,7 @@ int main(int argc, char *argv[])
     }
 
     // Listen for incoming connections
-    if (listen(server_socket, backlog) < 0)
+    if (listen(server_socket, SOMAXCONN) < 0)
     {
         perror("Listen failed");
         exit(EXIT_FAILURE);
