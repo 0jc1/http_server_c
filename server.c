@@ -185,7 +185,7 @@ void handle_request(int client_socket)
     /* send file in 8KB block - last block may be smaller */
     while ((ret = read(file_fd, buffer, BUFFER_SIZE)) > 0)
     {
-        (void)write(fd, buffer, ret);
+        (void)write(client_socket, buffer, ret);
     }
     sleep(1); /* allow socket to drain before signalling the socket is closed */
 
