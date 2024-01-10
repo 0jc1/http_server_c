@@ -65,7 +65,7 @@ void logMessage(const char *format, ...)
     {
         return;
     }
-    char time_str[sizeof(buf) + 10]; // Assuming HH:MM:SS format
+    char time_str[sizeof(buf) + 13]; // Assuming HH:MM:SS format
     sprintf(time_str, "%02d:%02d:%02d ", tm->tm_hour, tm->tm_min, tm->tm_sec);
     strcat(time_str, buf);
 
@@ -78,6 +78,8 @@ void logMessage(const char *format, ...)
         perror("Error opening file");
         return;
     }
+    char newline = '\n';
+    write(fd, &newline, 1); // write new line
 
     ssize_t bytesWritten = write(fd, time_str, strlen(time_str));
     if (bytesWritten == -1)
@@ -148,7 +150,7 @@ void handle_request(int client_socket)
         }
     }
 
-    for (j = 0; j < i - 1; j++) /* check for illegal parent directory use .. */
+    for (size_t j = 0; j < i - 1; j++) /* check for illegal parent directory use .. */
         if (buffer[j] == '.' && buffer[j + 1] == '.')
         {
             logMessage("Parent directory (..) path names not supported");
@@ -158,10 +160,11 @@ void handle_request(int client_socket)
 
     /* work out the file type and check we support it */
     int buflen = strlen(buffer);
-    int fstr = (char *)0;
+    long len;
+    char* fstr = (char *)0;
     for (i = 0; mimeTypes[i].extension != 0; i++)
     {
-        len = strlen(mimeTypes[i].extension);
+        len = strlen(mimeTypes[i].extension)+1;
         if (!strncmp(&buffer[buflen - len], mimeTypes[i].extension, len))
         {
             fstr = mimeTypes[i].type;
@@ -169,8 +172,9 @@ void handle_request(int client_socket)
         }
     }
     if (fstr == 0)
-        logMessage("file extension type not supported", buffer, fd);
+        logMessage("file extension type not supported");
 
+    int file_fd;
     if ((file_fd = open(&buffer[5], O_RDONLY)) == -1)
     { /* open the file for reading */
         logMessage("failed to open file %s", &buffer[5]);
