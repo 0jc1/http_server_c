@@ -51,7 +51,7 @@ void logMessage(const char *format, ...)
         return;
     }
 
-    char buf[len + 1];
+    char buf[len + 20];
     len = vsnprintf(buf, sizeof buf, format, arg);
     if (len < 0)
     {
@@ -68,11 +68,14 @@ void logMessage(const char *format, ...)
     {
         return;
     }
-    printf("%02d:%02d:%02d ", tm->tm_hour, tm->tm_min, tm->tm_sec);
+    char time_str[sizeof(buf)+10];  // Assuming HH:MM:SS format
+    sprintf(time_str, "%02d:%02d:%02d ", tm->tm_hour, tm->tm_min, tm->tm_sec);
+    strcat(time_str, buf);
 
-    printf("%s\n", buf);
 
-    int fd = open("server.log", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    printf("%s\n", time_str);
+
+    int fd = open("server.log", O_WRONLY | O_APPEND | O_CREAT, S_IRUSR | S_IWUSR);
 
     if (fd == -1)
     {
@@ -80,7 +83,7 @@ void logMessage(const char *format, ...)
         return;
     }
 
-    ssize_t bytesWritten = write(fd, buf, strlen(buf));
+    ssize_t bytesWritten = write(fd, time_str, strlen(time_str));
     if (bytesWritten == -1)
     {
         perror("Error writing to file");
@@ -138,7 +141,7 @@ void handle_request(int client_socket)
         logMessage("Only simple GET operation supported");
     }
 
-    for (i = 4; i < BUFFER_SIZE; i++)
+    for (size_t i = 4; i < BUFFER_SIZE; i++)
     { //null terminate after the second space to ignore extra stuff
         if (buffer[i] == ' ')
         {

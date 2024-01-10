@@ -1,5 +1,5 @@
-C=gcc
-CFLAGS=-Wall
+C = gcc
+CFLAGS = -Wall
 
 all: http_server
 
