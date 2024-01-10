@@ -139,9 +139,9 @@ void handle_request(int client_socket)
     }
 
     for (i = 4; i < BUFFER_SIZE; i++)
-    { // null terminate after the second space to ignore extra stuff 
+    { //null terminate after the second space to ignore extra stuff
         if (buffer[i] == ' ')
-        { 
+        {
             buffer[i] = 0;
             break;
         }
