@@ -92,16 +92,18 @@ void logMessage(const char *format, ...)
 }
 
 // Function to get MIME type based on file extension
-const char *getMimeType(const char *fileExtension, size_t numMimeTypes)
+const char *getMimeType(const char *fileExtension)
 {
-    for (size_t i = 0; i < numMimeTypes; ++i)
+    for (i = 0; mimeTypes[i].extension != 0; i++)
     {
-        if (strcmp(fileExtension, mimeTypes[i].extension) == 0)
+        len = strlen(mimeTypes[i].extension);
+        if (!strncmp(fileExtension, mimeTypes[i].extension, len))
         {
             return mimeTypes[i].type;
+            break;
         }
     }
-    return "application/octet-stream"; // Default MIME type for unknown or binary files
+    return 0;
 }
 
 void handle_request(int client_socket)
@@ -133,8 +135,6 @@ void handle_request(int client_socket)
         }
     }
 
-    logMessage("read request");
-
     if (strncmp(buffer, "GET ", 4) && strncmp(buffer, "get ", 4))
     {
         logMessage("Only simple GET operation supported");
@@ -150,11 +150,17 @@ void handle_request(int client_socket)
         }
     }
 
-    for (size_t j = 0; j < i - 1; j++) /* check for illegal parent directory use .. */
+
+    logMessage("read request %s", buffer);
+
+    for (size_t j = 0; j < i - 1; j++) { /* check for illegal parent directory use .. */
         if (buffer[j] == '.' && buffer[j + 1] == '.')
         {
             logMessage("Parent directory (..) path names not supported");
+            return;
         }
+    }
+
     if (!strncmp(&buffer[0], "GET /\0", 6) || !strncmp(&buffer[0], "get /\0", 6)) /* convert no filename to index file */
         (void)strcpy(buffer, "GET /index.html");
 
@@ -163,15 +169,9 @@ void handle_request(int client_socket)
     long len;
     char *fstr = (char *)0;
 
-    for (i = 0; mimeTypes[i].extension != 0; i++)
-    {
-        len = strlen(mimeTypes[i].extension);
-        if (!strncmp(&buffer[buflen - len], mimeTypes[i].extension, len))
-        {
-            fstr = mimeTypes[i].type;
-            break;
-        }
-    }
+    char* extension = &buffer[4];
+
+    fstr = getMimeType(extension);
 
     if (fstr == 0) {
         logMessage("file extension type not supported");
