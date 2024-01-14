@@ -65,7 +65,7 @@ void logMessage(const char *format, ...)
     {
         return;
     }
-    char time_str[sizeof(buf) + 13]; // Assuming HH:MM:SS format
+    char time_str[len + 13]; // Assuming HH:MM:SS format
     sprintf(time_str, "%02d:%02d:%02d ", tm->tm_hour, tm->tm_min, tm->tm_sec);
     strcat(time_str, buf);
 
@@ -161,7 +161,7 @@ void handle_request(int client_socket)
     /* work out the file type and check we support it */
     int buflen = strlen(buffer);
     long len;
-    char* fstr = (char *)0;
+    char *fstr = (char *)0;
 
     for (i = 0; mimeTypes[i].extension != 0; i++)
     {
@@ -172,20 +172,22 @@ void handle_request(int client_socket)
             break;
         }
     }
-    if (fstr == 0)
+
+    if (fstr == 0) {
         logMessage("file extension type not supported");
+    }
 
     int file_fd;
-    if ((file_fd = open(&buffer[5], O_RDONLY)) == -1)
-    { /* open the file for reading */
+    if ((file_fd = open(&buffer[5], O_RDONLY)) == -1) { /* open the file for reading */
         logMessage("failed to open file %s", &buffer[5]);
     }
+
     logMessage("SEND");
-    len = (long)lseek(file_fd, (off_t)0, SEEK_END);                                                                                                /* lseek to the file end to find the length */
+    len = (long)lseek(file_fd, (off_t)0, SEEK_END);                                                                                          /* lseek to the file end to find the length */
     lseek(file_fd, (off_t)0, SEEK_SET);                                                                                                      /* lseek back to the file start ready for reading */
-    sprintf(buffer, "HTTP/1.1 200 OK\nServer: nweb/%d.0\nContent-Length: %ld\nConnection: close\nContent-Type: %s\n\n", VERSION, len, fstr); /* Header + a blank line */
-    //logMessage("Header", buffer, hit);
-    write(client_socket, buffer, strlen(buffer));
+    sprintf(buffer, "HTTP/1.1 200 OK\r\nServer: nweb/%d.0\r\nContent-Length: %ld\r\nConnection: close\r\nContent-Type: %s\r\n\n", VERSION, len, fstr); /* Header + a blank line */
+    // logMessage("Header", buffer, hit);
+    write(client_socket, buffer, buflen);
 
     /* send file in 8KB block - last block may be smaller */
     while ((ret = read(file_fd, buffer, BUFFER_SIZE)) > 0)
