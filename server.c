@@ -19,6 +19,7 @@ struct MimeType
     char *extension;
     char *type;
 } mimeTypes[] = {
+   /*
     {"gif", "image/gif"},
     {"jpg", "image/jpg"},
     {"jpeg", "image/jpeg"},
@@ -29,8 +30,24 @@ struct MimeType
     {"gz", "image/gz"},
     {"tar", "image/tar"},
     {"htm", "text/html"},
+    */
     {"html", "text/html"},
 };
+
+// Function to get MIME type based on file extension
+const char *getMimeType(const char *fileExtension)
+{
+    for (int i = 0; mimeTypes[i].extension != 0; i++)
+    {
+        int len = strlen(mimeTypes[i].extension);
+        if (!strncmp(fileExtension, mimeTypes[i].extension, len))
+        {
+            return mimeTypes[i].type;
+            break;
+        }
+    }
+    return 0;
+}
 
 void logMessage(const char *format, ...)
 {
@@ -48,7 +65,7 @@ void logMessage(const char *format, ...)
         return;
     }
 
-    char buf[len];
+    char buf[len + 1];
     len = vsnprintf(buf, sizeof buf, format, arg);
     if (len < 0)
     {
@@ -71,6 +88,8 @@ void logMessage(const char *format, ...)
 
     printf("%s\n", time_str);
 
+    //output to log file
+    /*
     int fd = open("server.log", O_WRONLY | O_APPEND | O_CREAT | O_NONBLOCK, S_IRUSR | S_IWUSR);
 
     if (fd == -1)
@@ -89,21 +108,7 @@ void logMessage(const char *format, ...)
 
     // Close the log file
     close(fd);
-}
-
-// Function to get MIME type based on file extension
-const char *getMimeType(const char *fileExtension)
-{
-    for (i = 0; mimeTypes[i].extension != 0; i++)
-    {
-        len = strlen(mimeTypes[i].extension);
-        if (!strncmp(fileExtension, mimeTypes[i].extension, len))
-        {
-            return mimeTypes[i].type;
-            break;
-        }
-    }
-    return 0;
+    */
 }
 
 void handle_request(int client_socket)
@@ -150,7 +155,6 @@ void handle_request(int client_socket)
         }
     }
 
-
     logMessage("read request %s", buffer);
 
     for (size_t j = 0; j < i - 1; j++) { /* check for illegal parent directory use .. */
@@ -165,11 +169,16 @@ void handle_request(int client_socket)
         (void)strcpy(buffer, "GET /index.html");
 
     /* work out the file type and check we support it */
-    int buflen = strlen(buffer);
     long len;
-    char *fstr = (char *)0;
+    const char *fstr = (char *)0;
+    char* extension = 0;
 
-    char* extension = &buffer[4];
+    // Find the position of the dot
+    char* dotPosition = strchr(&buffer[4], '.');
+
+    if (dotPosition != NULL) {
+        extension = dotPosition + 1;
+    }
 
     fstr = getMimeType(extension);
 
@@ -179,15 +188,17 @@ void handle_request(int client_socket)
 
     int file_fd;
     if ((file_fd = open(&buffer[5], O_RDONLY)) == -1) { /* open the file for reading */
+
         logMessage("failed to open file %s", &buffer[5]);
     }
 
     logMessage("SEND");
-    len = (long)lseek(file_fd, (off_t)0, SEEK_END);                                                                                          /* lseek to the file end to find the length */
-    lseek(file_fd, (off_t)0, SEEK_SET);                                                                                                      /* lseek back to the file start ready for reading */
+    len = (long)lseek(file_fd, (off_t)0, SEEK_END); /* lseek to the file end to find the length */
+    lseek(file_fd, (off_t)0, SEEK_SET); /* lseek back to the file start ready for reading */
     sprintf(buffer, "HTTP/1.1 200 OK\r\nServer: nweb/%d.0\r\nContent-Length: %ld\r\nConnection: close\r\nContent-Type: %s\r\n\n", VERSION, len, fstr); /* Header + a blank line */
-    // logMessage("Header", buffer, hit);
-    write(client_socket, buffer, buflen);
+
+    write(client_socket, buffer, strlen(buffer));
+
 
     /* send file in 8KB block - last block may be smaller */
     while ((ret = read(file_fd, buffer, BUFFER_SIZE)) > 0)
@@ -241,6 +252,9 @@ int main(int argc, char *argv[])
     server_address.sin_addr.s_addr = INADDR_ANY;
     server_address.sin_port = htons(port);
 
+    int true1 = 1;
+    setsockopt(server_socket,SOL_SOCKET,SO_REUSEADDR,&true1,sizeof(int));
+
     // Bind the socket
     if (bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
     {
@@ -271,6 +285,8 @@ int main(int argc, char *argv[])
         // Handle the HTTP request
         handle_request(client_socket);
     }
+
+
 
     return 0;
 }
