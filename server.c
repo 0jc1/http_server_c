@@ -172,10 +172,7 @@ void handle_request(int client_socket) {
 
     int file_fd;
     if ((file_fd = open( & buffer[5], O_RDONLY)) == -1) {
-        /* open the file for reading */
-
         logMessage("failed to open file %s", & buffer[5]);
-    } else {
         statusCode = 404;
         strcpy(reasonPhrase, "Not Found");
     }
