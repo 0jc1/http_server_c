@@ -149,6 +149,9 @@ void handle_request(int client_socket) {
     if (!strncmp( & buffer[0], "GET /\0", 6) || !strncmp( & buffer[0], "get /\0", 6)) /* convert no filename to index file */
         (void) strcpy(buffer, "GET /index.html");
 
+    int statusCode = 200;
+    char reasonPhrase[20] = "OK";
+
     /* work out the file type and check we support it */
     long len;
     const char * fstr = (char * ) 0;
@@ -172,12 +175,15 @@ void handle_request(int client_socket) {
         /* open the file for reading */
 
         logMessage("failed to open file %s", & buffer[5]);
+    } else {
+        statusCode = 404;
+        reasonPhrase = "Not Found";
     }
 
     logMessage("SEND");
     len = (long) lseek(file_fd, (off_t) 0, SEEK_END); /* lseek to the file end to find the length */
     lseek(file_fd, (off_t) 0, SEEK_SET); /* lseek back to the file start ready for reading */
-    sprintf(buffer, "HTTP/1.1 200 OK\r\nServer: nweb/%d.0\r\nContent-Length: %ld\r\nConnection: close\r\nContent-Type: %s\r\n\n", VERSION, len, fstr); /* Header + a blank line */
+    sprintf(buffer, "HTTP/1.1 %d %s\r\nServer: nweb/%d.0\r\nContent-Length: %ld\r\nConnection: close\r\nContent-Type: %s\r\n\n", statusCode, reasonPhrase,VERSION, len, fstr); /* Header + a blank line */
 
     write(client_socket, buffer, strlen(buffer));
 
