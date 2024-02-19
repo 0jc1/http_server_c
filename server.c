@@ -177,7 +177,7 @@ void handle_request(int client_socket) {
         logMessage("failed to open file %s", & buffer[5]);
     } else {
         statusCode = 404;
-        reasonPhrase = "Not Found";
+        strcpy(reasonPhrase, "Not Found");
     }
 
     logMessage("SEND");
