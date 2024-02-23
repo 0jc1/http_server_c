@@ -1,5 +1,5 @@
 C = gcc
-CFLAGS = -Wall
+CFLAGS = -Wall -pthread
 
 all: http_server
 
