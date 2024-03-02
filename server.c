@@ -112,8 +112,8 @@ void logMessage(const char *format, ...)
 void *handle_request(void * client_fd)
 {
     int client_socket = * ((int *)client_fd);
-    char buffer[BUFFER_SIZE] = {
-        0};
+    char buffer[BUFFER_SIZE] = {0};
+
     size_t i = 0;
 
     long ret = read(client_socket, buffer, BUFFER_SIZE - 1);
@@ -121,6 +121,7 @@ void *handle_request(void * client_fd)
     if (ret == 0 || ret == -1)
     {
         logMessage("failed to read client request");
+        return NULL;
     }
 
     if (ret > 0 && ret < BUFFER_SIZE)
@@ -262,7 +263,7 @@ int main(int argc, char *argv[])
     server_address.sin_port = htons(port);
 
     int true1 = 1;
-    setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &true1, sizeof(int));
+    setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &true1, sizeof(int)); // set option to reuse local addresses
 
     // Bind the socket
     if (bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
@@ -280,9 +281,10 @@ int main(int argc, char *argv[])
 
     logMessage("Server listening on 127.0.0.1:%d...\n", port);
 
+    int *client_fd = malloc(sizeof(int));
+
     while (1)
     {
-        int *client_fd = malloc(sizeof(int));
 
         // Accept incoming connection
         if ((*client_fd = accept(server_socket, (struct sockaddr *)&client_address, &address_len)) < 0)
