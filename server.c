@@ -33,6 +33,20 @@ struct MimeType
     {"html", "text/html"},
 };
 
+enum HttpStatusCode {
+    OK = 200,
+    CREATED = 201,
+    ACCEPTED = 202,
+    NO_CONTENT = 204,
+    BAD_REQUEST = 400,
+    UNAUTHORIZED = 401,
+    FORBIDDEN = 403,
+    NOT_FOUND = 404,
+    INTERNAL_SERVER_ERROR = 500,
+    NOT_IMPLEMENTED = 501,
+    SERVICE_UNAVAILABLE = 503
+};
+
 // Function to get MIME type based on file extension
 const char *getMimeType(const char *fileExtension)
 {
@@ -158,7 +172,7 @@ void *handle_request(void * client_fd)
 
     logMessage("read request %s", buffer);
 
-    int statusCode = 200;
+    enum HttpStatusCode statusCode = OK;
     char reasonPhrase[20] = "OK";
 
     for (size_t j = 0; j < i - 1; j++)
@@ -167,7 +181,7 @@ void *handle_request(void * client_fd)
         if (buffer[j] == '.' && buffer[j + 1] == '.')
         {
             logMessage("Parent directory (..) path names not supported");
-            statusCode = 403;
+            statusCode = FORBIDDEN;
             strcpy(reasonPhrase, "Forbidden");
         }
     }
@@ -200,7 +214,7 @@ void *handle_request(void * client_fd)
     if ((file_fd = open(&buffer[5], O_RDONLY)) == -1 && statusCode == 200)
     {
         logMessage("failed to open file %s", &buffer[5]);
-        statusCode = 404;
+        statusCode = NOT_FOUND;
         strcpy(reasonPhrase, "Not Found");
     }
 
