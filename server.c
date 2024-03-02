@@ -50,15 +50,19 @@ enum HttpStatusCode {
 // Function to get MIME type based on file extension
 const char *getMimeType(const char *fileExtension)
 {
-    for (int i = 0; mimeTypes[i].extension != 0; i++)
+    if (fileExtension == NULL) {
+        return NULL;
+    }
+
+    for (int i = 0; mimeTypes[i].extension != NULL; i++)
     {
         int len = strlen(mimeTypes[i].extension);
-        if (!strncmp(fileExtension, mimeTypes[i].extension, len))
+        if (len > 0 && strncmp(fileExtension, mimeTypes[i].extension, len) == 0)
         {
             return mimeTypes[i].type;
         }
     }
-    return 0;
+    return NULL;
 }
 
 void logMessage(const char *format, ...)
@@ -189,7 +193,6 @@ void *handle_request(void * client_fd)
     if (!strncmp(&buffer[0], "GET /\0", 6) || !strncmp(&buffer[0], "get /\0", 6)) /* convert no filename to index file */
         (void)strcpy(buffer, "GET /index.html");
 
-
     /* work out the file type and check we support it */
     long len;
     const char *fstr = (char *)0;
@@ -211,7 +214,7 @@ void *handle_request(void * client_fd)
     }
 
     int file_fd;
-    if ((file_fd = open(&buffer[5], O_RDONLY)) == -1 && statusCode == 200)
+    if ((file_fd = open(&buffer[5], O_RDONLY)) == -1)
     {
         logMessage("failed to open file %s", &buffer[5]);
         statusCode = NOT_FOUND;
