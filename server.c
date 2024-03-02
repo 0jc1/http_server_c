@@ -158,21 +158,23 @@ void *handle_request(void * client_fd)
 
     logMessage("read request %s", buffer);
 
+    int statusCode = 200;
+    char reasonPhrase[20] = "OK";
+
     for (size_t j = 0; j < i - 1; j++)
     {
         /* check for illegal parent directory use .. */
         if (buffer[j] == '.' && buffer[j + 1] == '.')
         {
             logMessage("Parent directory (..) path names not supported");
-            return NULL;
+            statusCode = 403;
+            strcpy(reasonPhrase, "Forbidden");
         }
     }
 
     if (!strncmp(&buffer[0], "GET /\0", 6) || !strncmp(&buffer[0], "get /\0", 6)) /* convert no filename to index file */
         (void)strcpy(buffer, "GET /index.html");
 
-    int statusCode = 200;
-    char reasonPhrase[20] = "OK";
 
     /* work out the file type and check we support it */
     long len;
@@ -195,7 +197,7 @@ void *handle_request(void * client_fd)
     }
 
     int file_fd;
-    if ((file_fd = open(&buffer[5], O_RDONLY)) == -1)
+    if ((file_fd = open(&buffer[5], O_RDONLY)) == -1 && statusCode == 200)
     {
         logMessage("failed to open file %s", &buffer[5]);
         statusCode = 404;
