@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    int server_socket;
+    int server_socket, true1;
     struct sockaddr_in server_address, client_address;
     socklen_t address_len = sizeof(server_address);
 
@@ -281,7 +281,7 @@ int main(int argc, char *argv[])
     server_address.sin_addr.s_addr = INADDR_ANY;
     server_address.sin_port = htons(port);
 
-    int true1 = 1;
+    true1 = 1;
     setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &true1, sizeof(int)); // set option to reuse local addresses
 
     // Bind the socket
@@ -300,10 +300,9 @@ int main(int argc, char *argv[])
 
     logMessage("Server listening on 127.0.0.1:%d...\n", port);
 
-    int *client_fd = malloc(sizeof(int));
-
     while (1)
     {
+        int *client_fd = malloc(sizeof(int));
 
         // Accept incoming connection
         if ((*client_fd = accept(server_socket, (struct sockaddr *)&client_address, &address_len)) < 0)
