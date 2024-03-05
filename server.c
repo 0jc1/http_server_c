@@ -189,7 +189,7 @@ void *handle_request(void * client_fd)
             strcpy(reasonPhrase, "Forbidden");
         }
     }
-
+    //TODO show files in a directory 
     if (!strncmp(&buffer[0], "GET /\0", 6) || !strncmp(&buffer[0], "get /\0", 6)) /* convert no filename to index file */
         (void)strcpy(buffer, "GET /index.html");
 
@@ -258,6 +258,11 @@ int main(int argc, char *argv[])
                 exit(4);
             }
         }
+    }
+
+    if (docroot == NULL) {
+        printf("error: docroot is null\n");
+        exit(EXIT_FAILURE);
     }
 
     if (port <= 0 || port > 65535)
