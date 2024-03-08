@@ -1,10 +1,10 @@
 C = gcc
-CFLAGS = -Wall -pthread
+CFLAGS = -Wall -pthread -O1
 
 all: http_server
 
 http_server:
-	$(CC) $(CFLAGS) -o server server.c
+	$(CC) $(CFLAGS) -o server main.c server.c
 
 clean:
 	rm -f server
