@@ -1,2 +1,4 @@
 server.log
 server
+client
+client.c
