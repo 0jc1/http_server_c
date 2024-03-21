@@ -174,7 +174,6 @@ void *handle_request(void * client_fd)
     int client_socket = * ((int *)client_fd);
     char buffer[BUFFER_SIZE] = {0};
 
-
     // get message
     // parse the request
     // print out the correct header
@@ -197,14 +196,6 @@ void *handle_request(void * client_fd)
     else
     {
         buffer[0] = 0;
-    }
-
-    for (i = 0; i < ret; i++)
-    { // remove CF and LF characters
-        if (buffer[i] == '\r' || buffer[i] == '\n')
-        {
-            buffer[i] = '*';
-        }
     }
 
     if (strncmp(buffer, "GET ", 4) && strncmp(buffer, "get ", 4))
@@ -262,7 +253,6 @@ void *handle_request(void * client_fd)
     }
 
     char * file_name = &buffer[5];
-
     char * file_data = render_static_file(file_name, &len);
 
     if (file_data == NULL) {
@@ -271,8 +261,7 @@ void *handle_request(void * client_fd)
         strcpy(reasonPhrase, "Not Found");
     }
 
-    logMessage("SEND"); 
-                                                                                                                                           /* lseek back to the file start ready for reading */
+    logMessage("SEND");                                                                                                                             /* lseek back to the file start ready for reading */
     sprintf(buffer, "HTTP/1.1 %d %s\r\nServer: nweb/%d.0\r\nContent-Length: %ld\r\nConnection: close\r\nContent-Type: %s\r\n\r\n", statusCode, reasonPhrase, VERSION, len, fstr); /* Header + a blank line */
 
     (void)send(client_socket, buffer, strlen(buffer), 0);
@@ -280,7 +269,6 @@ void *handle_request(void * client_fd)
     (void)send(client_socket, file_data, len, 0);
 
     sleep(1); /* allow socket to drain before signalling the socket is closed */
-
     close(client_socket);
 
     return NULL;
