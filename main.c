@@ -36,7 +36,8 @@ struct MimeType
     {"html", "text/html"},
 };
 
-enum HttpStatusCode {
+enum HttpStatusCode
+{
     OK = 200,
     CREATED = 201,
     ACCEPTED = 202,
@@ -55,7 +56,8 @@ HTTP_Server http_server;
 // Function to get MIME type based on file extension
 const char *getMimeType(const char *fileExtension)
 {
-    if (fileExtension == NULL) {
+    if (fileExtension == NULL)
+    {
         return NULL;
     }
 
@@ -132,23 +134,25 @@ void logMessage(const char *format, ...)
     */
 }
 
-void cleanup(int sig) {
-    
+void cleanup(int sig)
+{
+
     printf("Cleaning up connections and exiting.\n");
-    
+
     // try to close the listening socket
-    if (close(http_server.socket) < 0) {
+    if (close(http_server.socket) < 0)
+    {
         fprintf(stderr, "Error calling close()\n");
         exit(EXIT_FAILURE);
     }
-    
+
     // exit with success
     exit(EXIT_SUCCESS);
 }
 
-void *handle_request(void * client_fd)
+void *handle_request(void *client_fd)
 {
-    int client_socket = * ((int *)client_fd);
+    int client_socket = *((int *)client_fd);
     char buffer[BUFFER_SIZE] = {0};
 
     size_t i = 0;
@@ -208,7 +212,7 @@ void *handle_request(void * client_fd)
             strcpy(reasonPhrase, "Forbidden");
         }
     }
-    //TODO show files in a directory 
+    // TODO show files in a directory
     if (!strncmp(&buffer[0], "GET /\0", 6) || !strncmp(&buffer[0], "get /\0", 6)) /* convert no filename to index file */
         (void)strcpy(buffer, "GET /index.html");
 
@@ -279,7 +283,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (docroot == NULL) {
+    if (docroot == NULL)
+    {
         printf("error: docroot is null\n");
         exit(EXIT_FAILURE);
     }
@@ -291,12 +296,12 @@ int main(int argc, char *argv[])
     }
 
     // set up signal handler for ctrl-c
-    (void) signal(SIGINT, cleanup);
+    (void)signal(SIGINT, cleanup);
 
     struct sockaddr_in client_address;
 
     // initiate server
-	init_server(&http_server, port);
+    init_server(&http_server, port);
 
     logMessage("Server listening on 127.0.0.1:%d...\n", port);
 
@@ -315,7 +320,7 @@ int main(int argc, char *argv[])
 
         // Create a new thread to handle client request
         pthread_t thread_id;
-        pthread_create(&thread_id, NULL, handle_request, (void *) client_fd);
+        pthread_create(&thread_id, NULL, handle_request, (void *)client_fd);
         pthread_detach(thread_id);
     }
 
