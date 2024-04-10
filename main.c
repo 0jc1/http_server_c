@@ -150,6 +150,32 @@ void cleanup(int sig)
     exit(EXIT_SUCCESS);
 }
 
+char *render_static_file(char *fileName, long *len)
+{
+    FILE *file = fopen(fileName, "r");
+
+    if (file == NULL)
+    {
+        return NULL;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long fsize = ftell(file);
+    *len = fsize * sizeof(char);
+    fseek(file, 0, SEEK_SET);
+
+    char *temp = malloc(sizeof(char) * (fsize + 1));
+    char ch;
+    int i = 0;
+    while ((ch = fgetc(file)) != EOF)
+    {
+        temp[i] = ch;
+        i++;
+    }
+    fclose(file);
+    return temp;
+}
+
 void *handle_request(void *client_fd)
 {
     int client_socket = *((int *)client_fd);
@@ -157,7 +183,7 @@ void *handle_request(void *client_fd)
 
     size_t i = 0;
 
-    long ret = read(client_socket, buffer, BUFFER_SIZE - 1);
+    int ret = read(client_socket, buffer, BUFFER_SIZE - 1);
 
     if (ret == 0 || ret == -1)
     {
@@ -172,14 +198,6 @@ void *handle_request(void *client_fd)
     else
     {
         buffer[0] = 0;
-    }
-
-    for (i = 0; i < ret; i++)
-    { // remove CF and LF characters
-        if (buffer[i] == '\r' || buffer[i] == '\n')
-        {
-            buffer[i] = '*';
-        }
     }
 
     if (strncmp(buffer, "GET ", 4) && strncmp(buffer, "get ", 4))
@@ -236,28 +254,24 @@ void *handle_request(void *client_fd)
         logMessage("file extension type not supported");
     }
 
-    int file_fd;
-    if ((file_fd = open(&buffer[5], O_RDONLY)) == -1)
+    char *file_name = &buffer[5];
+    char *file_data = render_static_file(file_name, &len);
+
+    if (file_data == NULL)
     {
         logMessage("failed to open file %s", &buffer[5]);
         statusCode = NOT_FOUND;
         strcpy(reasonPhrase, "Not Found");
     }
 
-    logMessage("SEND");
-    len = (long)lseek(file_fd, (off_t)0, SEEK_END);                                                                                                                               /* lseek to the file end to find the length */
-    lseek(file_fd, (off_t)0, SEEK_SET);                                                                                                                                           /* lseek back to the file start ready for reading */
+    logMessage("SEND");                                                                                                                                                           /* lseek back to the file start ready for reading */
     sprintf(buffer, "HTTP/1.1 %d %s\r\nServer: nweb/%d.0\r\nContent-Length: %ld\r\nConnection: close\r\nContent-Type: %s\r\n\r\n", statusCode, reasonPhrase, VERSION, len, fstr); /* Header + a blank line */
 
-    write(client_socket, buffer, strlen(buffer));
+    (void)send(client_socket, buffer, strlen(buffer), 0);
 
-    /* send file in 8KB block - last block may be smaller */
-    while ((ret = read(file_fd, buffer, BUFFER_SIZE)) > 0)
-    {
-        (void)write(client_socket, buffer, ret);
-    }
+    (void)send(client_socket, file_data, len, 0);
+
     sleep(1); /* allow socket to drain before signalling the socket is closed */
-
     close(client_socket);
 
     return NULL;
