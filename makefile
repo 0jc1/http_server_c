@@ -10,5 +10,5 @@ client:
 	gcc -o client client.c -Wall
 
 clean:
-	rm -f server
+	rm -f server 
 	rm -f client

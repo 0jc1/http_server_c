@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h> // for close
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -9,24 +10,16 @@
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s <URL>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <Port>\n", argv[0]);
         return 1;
     }
 
-    char *url = argv[1];
-    char *host = strtok(url, "/");
-    char *path = strtok(NULL, "/");
-
-    struct hostent *server = gethostbyname(host);
-    if (server == NULL) {
-        fprintf(stderr, "Error: Unable to resolve host\n");
-        return 1;
-    }
+    int port = atoi(argv[1]);
 
     struct sockaddr_in server_address;
     server_address.sin_family = AF_INET;
-    server_address.sin_port = htons(8080);
-    memcpy(&server_address.sin_addr.s_addr, server->h_addr, server->h_length);
+    server_address.sin_port = htons(port);
+    server_address.sin_addr.s_addr = inet_addr("127.0.0.1");
 
     int client_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (client_socket < 0) {
@@ -40,7 +33,7 @@ int main(int argc, char *argv[]) {
     }
 
     char request[BUFFER_SIZE];
-    sprintf(request, "GET /%s HTTP/1.1\r\nHost: %s\r\n\r\n", path, host);
+    sprintf(request, "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
     if (send(client_socket, request, strlen(request), 0) < 0) {
         fprintf(stderr, "Error: Unable to send request\n");
         return 1;

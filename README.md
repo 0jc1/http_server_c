@@ -13,9 +13,9 @@ Compile
 make all
 ```
 
-Execute on port 8080
+Start the server
 ```
-./server 8080 docroot
+./server <port> <path to docroot>
 ```
 ## References
 

@@ -206,8 +206,9 @@ void *handle_request(void *client_fd)
         return NULL;
     }
 
+    // null terminate after the second space to ignore extra stuff
     for (i = 4; i < BUFFER_SIZE; i++)
-    { // null terminate after the second space to ignore extra stuff
+    {
         if (buffer[i] == ' ')
         {
             buffer[i] = 0;
@@ -280,7 +281,7 @@ void *handle_request(void *client_fd)
 int main(int argc, char *argv[])
 {
     int port = PORT;
-    char *docroot;
+    char *docroot = "docroot";
 
     // Parse the port number and doc root from the command-line argument
     if (argc >= 2)
@@ -309,7 +310,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    // set up signal handler for ctrl-c
+    // set up signal handler for ctrl-C
     (void)signal(SIGINT, cleanup);
 
     struct sockaddr_in client_address;
