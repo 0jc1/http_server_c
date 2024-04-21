@@ -256,7 +256,7 @@ void *handle_request(void *client_fd) {
     char *file_name = &buffer[5];
 
     if (!file_exists(file_name)) {
-        logMessage("failed to find file %s", &buffer[5]);
+        logMessage("failed to find file %s", file_name);
         statusCode = NOT_FOUND;
         strcpy(reasonPhrase, "Not Found");
     }
@@ -265,7 +265,7 @@ void *handle_request(void *client_fd) {
     char *file_data = render_static_file(file, &len);
 
     if (file_data == NULL) {
-        logMessage("failed to open file %s", &buffer[5]);
+        logMessage("failed to open file %s", file_name);
     }
 
     logMessage("SEND");
