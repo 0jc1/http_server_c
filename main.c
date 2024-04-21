@@ -37,6 +37,7 @@ enum HttpStatusCode {
     UNAUTHORIZED = 401,
     FORBIDDEN = 403,
     NOT_FOUND = 404,
+    UNSUPPORTED_MEDIA_TYPE = 415,
     INTERNAL_SERVER_ERROR = 500,
     NOT_IMPLEMENTED = 501,
     SERVICE_UNAVAILABLE = 503
@@ -131,10 +132,38 @@ void cleanup(int sig) {
     exit(EXIT_SUCCESS);
 }
 
-char *render_static_file(char *fileName, long *len) {
-    FILE *file = fopen(fileName, "r");
+int file_exists(const char *filename) {
+    struct stat buffer;
+    return stat(filename, &buffer) == 0;
+}
 
+FILE *get_file(char *fileName, int statusCode) {
+    FILE *file;
+
+    switch (statusCode) {
+        case OK:
+            break;
+        case NOT_FOUND:
+            fileName = "404.html";
+            break;
+        case UNSUPPORTED_MEDIA_TYPE:
+            file = NULL;
+            break;
+        case UNAUTHORIZED:
+            fileName = "400.html";
+            break;
+        default:
+            break;
+    }
+
+    file = fopen(fileName, "r");
+
+    return file;
+}
+
+char *render_static_file(FILE *file, long *len) {
     if (file == NULL) {
+        fprintf(stderr, "Failed to render. file is null\n");
         return NULL;
     }
 
@@ -189,7 +218,7 @@ void *handle_request(void *client_fd) {
     logMessage("read request %s", buffer);
 
     enum HttpStatusCode statusCode = OK;
-    char reasonPhrase[20] = "OK";
+    char reasonPhrase[100] = "OK";
 
     for (size_t j = 0; j < i - 1; j++) {
         /* check for illegal parent directory use .. */
@@ -199,11 +228,12 @@ void *handle_request(void *client_fd) {
             strcpy(reasonPhrase, "Forbidden");
         }
     }
+
     // TODO show files in a directory
     if (!strncmp(&buffer[0], "GET /\0", 6) || !strncmp(&buffer[0], "get /\0",6)) /* convert no filename to index file */
         (void)strcpy(buffer, "GET /index.html");
 
-    /* work out the file type and check we support it */
+    /* work out the file type and check if it's supported */
     long len;
     const char *fstr = (char *)0;
     char *extension = 0;
@@ -218,16 +248,24 @@ void *handle_request(void *client_fd) {
     fstr = getMimeType(extension);
 
     if (fstr == 0) {
-        logMessage("file extension type not supported");
+        logMessage("file extension type not supported.");
+        statusCode = UNSUPPORTED_MEDIA_TYPE;
+        strcpy(reasonPhrase, "Unsupported Media Type");
     }
 
     char *file_name = &buffer[5];
-    char *file_data = render_static_file(file_name, &len);
+
+    if (!file_exists(file_name)) {
+        logMessage("failed to find file %s", &buffer[5]);
+        statusCode = NOT_FOUND;
+        strcpy(reasonPhrase, "Not Found");
+    }
+
+    FILE *file = get_file(file_name, statusCode);
+    char *file_data = render_static_file(file, &len);
 
     if (file_data == NULL) {
         logMessage("failed to open file %s", &buffer[5]);
-        statusCode = NOT_FOUND;
-        strcpy(reasonPhrase, "Not Found");
     }
 
     logMessage("SEND");

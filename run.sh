@@ -4,6 +4,8 @@ make clean
 make all
 make client
 
-timeout 10s ./client
-./server 8080 docroot
-./client 8080 &
+./server 8080 docroot &
+_pid=$!
+sleep .5
+./client 8080
+kill -INT ${_pid}
