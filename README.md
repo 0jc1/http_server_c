@@ -15,7 +15,7 @@ make all
 
 Start the server
 ```
-./server <port> <path to docroot>
+./server <port> <path/to/docroot>
 ```
 ## References
 
