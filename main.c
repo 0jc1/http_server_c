@@ -308,6 +308,7 @@ void report(struct sockaddr_in *serverAddress)
     logMessage("\n\tServer listening on http://%s:%s\n", hostBuffer, serviceBuffer);
 }
 
+// Main function
 int main(int argc, char *argv[]) {
     int port = DEFAULT_PORT;
     char *docroot = "docroot";
