@@ -8,10 +8,16 @@
 void init_server(HTTP_Server *http_server, int port) {
     http_server->port = port;
 
-    int server_socket, true1;
+    int true1;
 
     // Create network socket
-    if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+    int server_socket = socket(
+        AF_INET,      // Domain: specifies protocol family
+        SOCK_STREAM,  // Type: specifies communication semantics
+        0             // Protocol: 0 because there is a single protocol for the specified family
+    );
+
+    if (server_socket == 0) {
         perror("Socket creation failed");
         exit(EXIT_FAILURE);
     }
@@ -19,7 +25,7 @@ void init_server(HTTP_Server *http_server, int port) {
     struct sockaddr_in server_address;
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(port);
-    server_address.sin_addr.s_addr = INADDR_ANY;
+    server_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // INADDR_ANY
     socklen_t address_len = sizeof(server_address);
 
     true1 = 1;
@@ -38,5 +44,6 @@ void init_server(HTTP_Server *http_server, int port) {
     }
     http_server->address_len = address_len;
     http_server->socket = server_socket;
+    http_server->address = (struct sockaddr_in *)&server_address;
     printf("HTTP Server Initialized\nPort: %d\n", http_server->port);
 }

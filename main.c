@@ -1,16 +1,20 @@
-#include <arpa/inet.h>
+#include <time.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <netdb.h> // for getnameinfo()
 #include <stdlib.h>
 #include <string.h>
+
+// Socket headers
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <time.h>
-#include <unistd.h>
+
+#include <arpa/inet.h>
 
 #include "server.h"
 
@@ -285,6 +289,27 @@ void *handle_request(void *client_fd) {
     return NULL;
 }
 
+// Custom report function
+void report(struct sockaddr_in *serverAddress)
+{
+    char hostBuffer[INET6_ADDRSTRLEN];
+    char serviceBuffer[NI_MAXSERV]; // defined in `<netdb.h>`
+    socklen_t addr_len = sizeof(*serverAddress);
+    int err = getnameinfo(
+        (struct sockaddr *) serverAddress,
+        addr_len,
+        hostBuffer,
+        sizeof(hostBuffer),
+        serviceBuffer,
+        sizeof(serviceBuffer),
+        NI_NUMERICHOST
+    );
+    if (err != 0) {
+        printf("It does not work\n");
+    }
+    logMessage("\n\tServer listening on http://%s:%s\n", hostBuffer, serviceBuffer);
+}
+
 int main(int argc, char *argv[]) {
     int port = PORT;
     char *docroot = "docroot";
@@ -297,13 +322,13 @@ int main(int argc, char *argv[]) {
     if (argc >= 3) {
         docroot = argv[2];
         if (chdir(docroot) == -1) {
-            (void)printf("ERROR: Can't Change to directory %s\n", docroot);
+            (void)printf("Error: Can't Change to directory %s\n", docroot);
             exit(4);
         }
     }
 
     if (docroot == NULL) {
-        printf("error: docroot is null\n");
+        printf("Error: docroot is null\n");
         exit(EXIT_FAILURE);
     }
 
@@ -320,7 +345,8 @@ int main(int argc, char *argv[]) {
     // initiate server
     init_server(&http_server, port);
 
-    logMessage("Server listening on 127.0.0.1:%d...\n", port);
+    // report
+    report(http_server.address);
 
     while (1) {
         int *client_fd = malloc(sizeof(int));
