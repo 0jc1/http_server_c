@@ -224,13 +224,11 @@ void *handle_request(void *client_fd) {
     enum HttpStatusCode statusCode = OK;
     char reasonPhrase[100] = "OK";
 
-    for (size_t j = 0; j < i - 1; j++) {
-        /* check for illegal parent directory use .. */
-        if (buffer[j] == '.' && buffer[j + 1] == '.') {
-            logMessage("Parent directory (..) path names not supported");
-            statusCode = FORBIDDEN;
-            strcpy(reasonPhrase, "Forbidden");
-        }
+    /* check for illegal parent directory use .. */
+    if (strstr(buffer, "..")) {
+        logMessage("Parent directory (..) path names not supported");
+        statusCode = FORBIDDEN;
+        strcpy(reasonPhrase, "Forbidden");
     }
 
     // TODO show files in a directory
