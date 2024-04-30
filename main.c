@@ -19,7 +19,7 @@
 #include "server.h"
 
 #define VERSION 23
-#define PORT 8080  // default port
+#define DEFAULT_PORT 8080
 #define BUFFER_SIZE 8096
 
 struct MimeType {
@@ -311,7 +311,7 @@ void report(struct sockaddr_in *serverAddress)
 }
 
 int main(int argc, char *argv[]) {
-    int port = PORT;
+    int port = DEFAULT_PORT;
     char *docroot = "docroot";
 
     // Parse the port number and doc root from the command-line argument
@@ -332,7 +332,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    if (port <= 0 || port > 65535) {
+    if (port <= 0 || port > 49151) {
         printf("Invalid port number: %s\n", argv[1]);
         exit(EXIT_FAILURE);
     }
