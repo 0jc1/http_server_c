@@ -29,7 +29,7 @@ struct MimeType {
     {"gif", "image/gif"}, {"jpg", "image/jpg"},  {"jpeg", "image/jpeg"},
     {"png", "image/png"}, {"css", "text/css"},   {"ico", "image/ico"},
     {"zip", "image/zip"}, {"gz", "image/gz"},    {"tar", "image/tar"},
-    {"htm", "text/html"}, {"html", "text/html"},
+    {"htm", "text/html"}, {"html", "text/html",}, {"plain","text/plain"}
 };
 
 enum HttpStatusCode {
@@ -190,9 +190,12 @@ char *render_static_file(FILE *file, long *len) {
 void *handle_request(void *client_fd) {
     int client_socket = *((int *)client_fd);
     char buffer[BUFFER_SIZE] = {0};
+    enum HttpStatusCode statusCode = OK;
+    char reasonPhrase[100] = "OK";
 
     size_t i = 0;
 
+    // read client request
     int ret = read(client_socket, buffer, BUFFER_SIZE - 1);
 
     if (ret == 0 || ret == -1) {
@@ -221,9 +224,6 @@ void *handle_request(void *client_fd) {
 
     logMessage("read request %s", buffer);
 
-    enum HttpStatusCode statusCode = OK;
-    char reasonPhrase[100] = "OK";
-
     /* check for illegal parent directory use .. */
     if (strstr(buffer, "..")) {
         logMessage("Parent directory (..) path names not supported");
@@ -232,7 +232,7 @@ void *handle_request(void *client_fd) {
     }
 
     // TODO show files in a directory
-    if (!strncmp(&buffer[0], "GET /\0", 6) || !strncmp(&buffer[0], "get /\0",6)) /* convert no filename to index file */
+    if (!strncmp(&buffer[0], "GET /\0", 6) || !strncmp(&buffer[0], "get /\0",6)) /* expand no filename to index file */
         (void)strcpy(buffer, "GET /index.html");
 
     /* work out the file type and check if it's supported */
