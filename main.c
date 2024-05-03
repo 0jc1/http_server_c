@@ -347,6 +347,10 @@ int main(int argc, char *argv[]) {
     // report
     report(http_server.address);
 
+    // Ignore SIGPIPE signal, so if browser cancels the request, it
+    // won't kill the whole process.
+    signal(SIGPIPE, SIG_IGN);
+
     while (1) {
         int *client_fd = malloc(sizeof(int));
 
