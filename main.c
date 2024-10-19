@@ -26,10 +26,11 @@ struct MimeType {
     char *extension;
     char *type;
 } mimeTypes[] = {
-    {"gif", "image/gif"}, {"jpg", "image/jpg"},  {"jpeg", "image/jpeg"},
-    {"png", "image/png"}, {"css", "text/css"},   {"ico", "image/ico"},
-    {"zip", "image/zip"}, {"gz", "image/gz"},    {"tar", "image/tar"},
-    {"htm", "text/html"}, {"html", "text/html",}, {"plain","text/plain"}
+    {"gif", "image/gif"},   {"jpg", "image/jpeg"}, {"jpeg", "image/jpeg"},
+    {"png", "image/png"},   {"css", "text/css"},   {"ico", "image/x-icon"},
+    {"zip", "application/zip"}, {"gz", "application/gzip"},
+    {"tar", "application/x-tar"}, {"htm", "text/html"}, {"html", "text/html"},
+    {"txt", "text/plain"}, {NULL, NULL} 
 };
 
 enum HttpStatusCode {
@@ -52,52 +53,31 @@ HTTP_Server http_server;
 // Function to get MIME type based on file extension
 const char *getMimeType(const char *fileExtension) {
     if (fileExtension == NULL) {
-        return NULL;
+        return "application/octet-stream";
     }
 
     for (int i = 0; mimeTypes[i].extension != NULL; i++) {
-        int len = strlen(mimeTypes[i].extension);
-        if (len > 0 &&
-            strncmp(fileExtension, mimeTypes[i].extension, len) == 0) {
+        if (strcasecmp(fileExtension, mimeTypes[i].extension) == 0) {
             return mimeTypes[i].type;
         }
     }
-    return NULL;
+    return "application/octet-stream";  // Default MIME type
 }
 
 void logMessage(const char *format, ...) {
     va_list arg;
     va_start(arg, format);
+    char buf[1024];
 
-    va_list argCopy;
-    va_copy(argCopy, arg);
-
-    int len = vsnprintf(NULL, 0, format, argCopy);
-    va_end(argCopy);
-
-    if (len < 0) {
-        return;
-    }
-
-    char buf[len + 1];
-    len = vsnprintf(buf, sizeof buf, format, arg);
-    if (len < 0) {
-        return;
-    }
+    vsnprintf(buf, sizeof(buf), format, arg);
+    va_end(arg);
 
     time_t t = time(NULL);
-    if (t == -1) {
-        return;
-    }
     struct tm *tm = localtime(&t);
-    if (tm == NULL) {
-        return;
-    }
-    char time_str[len + 13];  // Assuming HH:MM:SS format
-    sprintf(time_str, "%02d:%02d:%02d ", tm->tm_hour, tm->tm_min, tm->tm_sec);
-    strcat(time_str, buf);
+    char time_str[64];
+    strftime(time_str, sizeof(time_str), "[%H:%M:%S]", tm);
 
-    printf("%s\n", time_str);
+    printf("%s %s\n", time_str, buf);
 
     // output to log file
     /*
@@ -132,7 +112,6 @@ void cleanup(int sig) {
         exit(EXIT_FAILURE);
     }
 
-    // exit with success
     exit(EXIT_SUCCESS);
 }
 
@@ -359,7 +338,8 @@ int main(int argc, char *argv[]) {
                  accept(http_server.socket, (struct sockaddr *)&client_address,
                         &http_server.address_len)) < 0) {
             perror("Accept failed");
-            exit(EXIT_FAILURE);
+            free(client_fd);
+            continue;
         }
 
         logMessage("Connection accepted from %s:%d\n",
@@ -368,7 +348,12 @@ int main(int argc, char *argv[]) {
 
         // Create a new thread to handle client request
         pthread_t thread_id;
-        pthread_create(&thread_id, NULL, handle_request, (void *)client_fd);
+        if (pthread_create(&thread_id, NULL, handle_request, client_fd) != 0) {
+            perror("pthread_create");
+            close(*client_fd);
+            free(client_fd);
+            continue;
+        }
         pthread_detach(thread_id);
     }
 
