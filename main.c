@@ -192,7 +192,6 @@ void *handle_request(void *client_fd) {
         logMessage("Only simple GET operation supported");
         return NULL;
     }
-
     // null terminate after the second space to ignore extra stuff
     for (i = 4; i < BUFFER_SIZE; i++) {
         if (buffer[i] == ' ') {
