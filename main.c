@@ -261,7 +261,6 @@ void *handle_request(void *client_fd) {
 
     sleep(1); /* allow socket to drain before signalling the socket is closed */
     close(client_socket);
-
     return NULL;
 }
 
