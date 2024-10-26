@@ -1,5 +1,5 @@
 # http_server_c
-Basic and small prototype HTTP server coded in POSIX C. The motivation behind this project to learn more about HTTP, servers, and low level programming in a Unix-based environment. Based on tinyhttpd and Nigel's web server. It is able to serve static files, but not dynamic content.
+This project is a lightweight, prototype HTTP server written in POSIX C The motivation behind this project to learn more about HTTP, servers, and low level programming in a Unix-based environment. Based on concepts from tinyhttpd and Nigel's web server, it is designed to serve static files, though it does not support dynamic content generation. It currently has many limitations: no support for persistant connections, TLS/SSL encryption, chunked transfers, or compression/decompression.
 
 ## Features
 
