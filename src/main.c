@@ -155,7 +155,7 @@ char *render_static_file(FILE *file, long *len) {
     *len = fsize * sizeof(char);
     fseek(file, 0, SEEK_SET);
 
-    char *temp = malloc(sizeof(char) * (fsize + 1));
+    char *temp = calloc(sizeof(char), (fsize + 1));
     char ch;
     int i = 0;
     while ((ch = fgetc(file)) != EOF) {
@@ -255,12 +255,13 @@ void *handle_request(void *client_fd) {
             statusCode, reasonPhrase, VERSION, len,
             fstr); /* Header + a blank line */
 
-    (void)send(client_socket, buffer, strlen(buffer), 0);
+    (void)send(client_socket, buffer, strnlen(buffer, BUFFER_SIZE), 0);
 
     (void)send(client_socket, file_data, len, 0);
 
     sleep(1); /* allow socket to drain before signalling the socket is closed */
     close(client_socket);
+    free(file_data);
     return NULL;
 }
 
@@ -329,7 +330,7 @@ int main(int argc, char *argv[]) {
     signal(SIGPIPE, SIG_IGN);
 
     while (1) {
-        int *client_fd = malloc(sizeof(int));
+        int *client_fd = calloc(sizeof(int), 1);
 
         // Accept incoming connection
         if ((*client_fd =
