@@ -355,5 +355,5 @@ int main(int argc, char *argv[]) {
         pthread_detach(thread_id);
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }

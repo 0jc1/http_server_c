@@ -11,7 +11,7 @@
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <Port>\n", argv[0]);
-        return 1;
+        return EXIT_FAILURE;
     }
 
     int port = atoi(argv[1]);
@@ -24,19 +24,19 @@ int main(int argc, char *argv[]) {
     int client_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (client_socket < 0) {
         fprintf(stderr, "Error: Unable to create socket\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 
     if (connect(client_socket, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
         fprintf(stderr, "Error: Connection failed\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 
     char request[BUFFER_SIZE];
     sprintf(request, "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
     if (send(client_socket, request, strlen(request), 0) < 0) {
         fprintf(stderr, "Error: Unable to send request\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 
     char response[BUFFER_SIZE];
@@ -47,5 +47,5 @@ int main(int argc, char *argv[]) {
     }
 
     close(client_socket);
-    return 0;
+    return EXIT_SUCCESS;
 }
