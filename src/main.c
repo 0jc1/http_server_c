@@ -249,7 +249,7 @@ void *handle_request(void *client_fd) {
     }
 
     logMessage("SEND");
-    sprintf(buffer,
+    snprintf(buffer, BUFFER_SIZE,
             "HTTP/1.1 %d %s\r\nServer: nweb/%d.0\r\nContent-Length: "
             "%ld\r\nConnection: close\r\nContent-Type: %s\r\n\r\n",
             statusCode, reasonPhrase, VERSION, len,

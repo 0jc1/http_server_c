@@ -33,8 +33,8 @@ int main(int argc, char *argv[]) {
     }
 
     char request[BUFFER_SIZE];
-    sprintf(request, "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
-    if (send(client_socket, request, strlen(request), 0) < 0) {
+    snprintf(request, BUFFER_SIZE, "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
+    if (send(client_socket, request, strnlen(request, BUFFER_SIZE), 0) < 0) {
         fprintf(stderr, "Error: Unable to send request\n");
         return EXIT_FAILURE;
     }
