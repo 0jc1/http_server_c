@@ -146,7 +146,7 @@ FILE *get_file(char *fileName, int statusCode) {
 
 char *render_static_file(FILE *file, long *len) {
     if (file == NULL) {
-        fprintf(stderr, "Failed to render. file is null\n");
+        fprintf(stderr, "Failed to render. File is null\n");
         return NULL;
     }
 
@@ -211,7 +211,7 @@ void *handle_request(void *client_fd) {
 
     // TODO show files in a directory
     if (!strncmp(&buffer[0], "GET /\0", 6) || !strncmp(&buffer[0], "get /\0",6)) /* expand no filename to index file */
-        (void)strcpy(buffer, "GET /index.html");
+        strcpy(buffer, "GET /index.html");
 
     /* work out the file type and check if it's supported */
     long len;
@@ -266,10 +266,9 @@ void *handle_request(void *client_fd) {
 }
 
 // Custom report function
-void report(struct sockaddr_in *serverAddress)
-{
-    char hostBuffer[INET6_ADDRSTRLEN];
-    char serviceBuffer[NI_MAXSERV]; // defined in `<netdb.h>`
+void report(struct sockaddr_in *serverAddress) {
+    char hostBuffer[INET6_ADDRSTRLEN]; 
+    char serviceBuffer[NI_MAXSERV];   // defined in <netdb.h>
     socklen_t addr_len = sizeof(*serverAddress);
     int err = getnameinfo(
         (struct sockaddr *) serverAddress,
@@ -278,11 +277,12 @@ void report(struct sockaddr_in *serverAddress)
         sizeof(hostBuffer),
         serviceBuffer,
         sizeof(serviceBuffer),
-        NI_NUMERICHOST
-    );
+        NI_NUMERICHOST | NI_NUMERICSERV);
+        
     if (err != 0) {
-        printf("It does not work\n");
+        fprintf(stderr, "getnameinfo: %s\n", gai_strerror(err));
     }
+
     logMessage("\n\tServer listening on http://%s:%s\n", hostBuffer, serviceBuffer);
 }
 

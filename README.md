@@ -8,6 +8,12 @@ This project is a lightweight, minimal, prototype HTTP server written in POSIX C
 - Multi-threaded
 
 ## Usage
+
+Install packages
+```
+apt install gcc make
+```
+
 Compile
 ```
 make all
