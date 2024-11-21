@@ -21,6 +21,7 @@ make all
 
 Start the server
 ```
+cd bin
 ./server <port> <path/to/docroot>
 ```
 ## References
