@@ -3,7 +3,6 @@
 make clean
 make all
 make client
-
 ./server 8080 docroot &
 _pid=$!
 sleep .5
