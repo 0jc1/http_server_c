@@ -35,8 +35,8 @@ void init_server(HTTP_Server *http_server, int port) {
 
     // 6 is TCP's protocol number
     // enable this, much faster : 4000 req/s -> 17000 req/s
-    if (setsockopt(server_socket, 6, TCP_CORK, (const void *)&true1 , sizeof(int)) < 0)
-        exit(EXIT_FAILURE);
+    //if (setsockopt(server_socket, 6, TCP_CORK, (const void *)&true1 , sizeof(int)) < 0)
+    //    exit(EXIT_FAILURE);
 
     // Bind the socket
     if (bind(server_socket, (struct sockaddr *)&server_address, address_len) < 0) {

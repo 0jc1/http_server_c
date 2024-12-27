@@ -1,4 +1,6 @@
 server.log
 bin/server
 bin/client
+server
+client
 .vscode
