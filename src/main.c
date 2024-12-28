@@ -267,7 +267,7 @@ void *handle_request(void *client_fd) {
     // Try to open the requested file
     FILE *file = fopen(file_name, "rb");  // Open in binary mode
     if (file == NULL) {
-        logMessage("failed to find file %s in directory %s", file_name, cwd);
+        logMessage("failed to find file in directory %s", file_name);
         statusCode = NOT_FOUND;
         strcpy(reasonPhrase, "Not Found");
         // Try to open error page
