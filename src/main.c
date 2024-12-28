@@ -169,7 +169,6 @@ char *render_static_file(FILE *file, long *len) {
         free(temp);
         return NULL;
     }
-    logMessage("Successfully read file content");
     fclose(file);
     return temp;
 }
@@ -257,7 +256,6 @@ void *handle_request(void *client_fd) {
         logMessage("Request path: %s, using file: %s", path, file_name);
     }
 
-
     // Find file extension for MIME type
     char *extension = NULL;
     char *dotPosition = strrchr(file_name, '.');
@@ -265,10 +263,8 @@ void *handle_request(void *client_fd) {
         extension = dotPosition + 1;
     }
     const char *fstr = getMimeType(extension);
-    logMessage("File extension: %s, MIME type: %s", extension ? extension : "none", fstr);
 
     // Try to open the requested file
-    logMessage("Attempting to open file: %s", file_name);
     FILE *file = fopen(file_name, "rb");  // Open in binary mode
     if (file == NULL) {
         logMessage("failed to find file %s in directory %s", file_name, cwd);
@@ -297,7 +293,6 @@ void *handle_request(void *client_fd) {
             "Content-Type: %s\r\n"
             "\r\n",
             statusCode, reasonPhrase, VERSION, len, fstr);
-    
     
     // Send response
     size_t header_len = strnlen(buffer, BUFFER_SIZE);
@@ -387,17 +382,10 @@ int main(int argc, char *argv[]) {
     }
     printf("Document root: %s\n", abs_docroot);
     
-    // Verify docroot exists and contains index.html
+    // Verify docroot exists
     struct stat st;
     if (stat(abs_docroot, &st) == -1 || !S_ISDIR(st.st_mode)) {
         printf("Error: Document root %s is not a directory\n", abs_docroot);
-        exit(EXIT_FAILURE);
-    }
-    
-    char index_path[1024];
-    snprintf(index_path, sizeof(index_path), "%s/index.html", abs_docroot);
-    if (!file_exists(index_path)) {
-        printf("Error: index.html not found in %s\n", abs_docroot);
         exit(EXIT_FAILURE);
     }
     
