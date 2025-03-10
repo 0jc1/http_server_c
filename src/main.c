@@ -121,27 +121,28 @@ int file_exists(const char *filename) {
 }
 
 FILE *get_file(char *fileName, int statusCode) {
-    FILE *file;
+    const char *file_to_open = fileName;
 
     switch (statusCode) {
         case OK:
             break;
         case NOT_FOUND:
-            fileName = "404.html";
+            file_to_open = "404.html";
             break;
         case UNSUPPORTED_MEDIA_TYPE:
-            file = NULL;
-            break;
+            return NULL;
         case UNAUTHORIZED:
-            fileName = "400.html";
+            file_to_open = "400.html";
             break;
         default:
             break;
     }
 
-    file = fopen(fileName, "r");
+    if (!file_to_open) {
+        return NULL;
+    }
 
-    return file;
+    return fopen(file_to_open, "r");
 }
 
 char *render_static_file(FILE *file, long *len) {
@@ -150,18 +151,42 @@ char *render_static_file(FILE *file, long *len) {
         return NULL;
     }
 
-    fseek(file, 0, SEEK_END);
+    if (fseek(file, 0, SEEK_END) != 0) {
+        fprintf(stderr, "Failed to seek file\n");
+        fclose(file);
+        return NULL;
+    }
+
     long fsize = ftell(file);
+    if (fsize == -1) {
+        fprintf(stderr, "Failed to get file size\n");
+        fclose(file);
+        return NULL;
+    }
+
     *len = fsize * sizeof(char);
-    fseek(file, 0, SEEK_SET);
+    
+    if (fseek(file, 0, SEEK_SET) != 0) {
+        fprintf(stderr, "Failed to seek back to start of file\n");
+        fclose(file);
+        return NULL;
+    }
 
     char *temp = calloc(sizeof(char), (fsize + 1));
-    char ch;
-    int i = 0;
-    while ((ch = fgetc(file)) != EOF) {
-        temp[i] = ch;
-        i++;
+    if (temp == NULL) {
+        fprintf(stderr, "Failed to allocate memory for file content\n");
+        fclose(file);
+        return NULL;
     }
+
+    size_t bytes_read = fread(temp, 1, fsize, file);
+    if (bytes_read != (size_t)fsize) {
+        fprintf(stderr, "Failed to read entire file\n");
+        free(temp);
+        fclose(file);
+        return NULL;
+    }
+
     fclose(file);
     return temp;
 }
@@ -171,26 +196,29 @@ void *handle_request(void *client_fd) {
     char buffer[BUFFER_SIZE] = {0};
     enum HttpStatusCode statusCode = OK;
     char reasonPhrase[100] = "OK";
-
+    char *file_data = NULL;
+    FILE *file = NULL;
     size_t i = 0;
+    long len = 0;
 
     // read client request
     int ret = read(client_socket, buffer, BUFFER_SIZE - 1);
 
     if (ret == 0 || ret == -1) {
         logMessage("failed to read client request");
-        return NULL;
+        goto cleanup;
     }
 
     if (ret > 0 && ret < BUFFER_SIZE) {
         buffer[ret] = 0;
     } else {
         buffer[0] = 0;
+        goto cleanup;  // Buffer overflow protection
     }
 
     if (strncmp(buffer, "GET ", 4) && strncmp(buffer, "get ", 4)) {
         logMessage("Only simple GET operation supported");
-        return NULL;
+        goto cleanup;
     }
     // null terminate after the second space to ignore extra stuff
     for (i = 4; i < BUFFER_SIZE; i++) {
@@ -214,7 +242,6 @@ void *handle_request(void *client_fd) {
         strcpy(buffer, "GET /index.html");
 
     /* work out the file type and check if it's supported */
-    long len;
     const char *fstr = (char *)0;
     char *extension = 0;
 
@@ -241,11 +268,20 @@ void *handle_request(void *client_fd) {
         strcpy(reasonPhrase, "Not Found");
     }
 
-    FILE *file = get_file(file_name, statusCode);
-    char *file_data = render_static_file(file, &len);
-
-    if (file_data == NULL) {
+    file = get_file(file_name, statusCode);
+    if (file == NULL) {
         logMessage("failed to open file %s", file_name);
+        statusCode = INTERNAL_SERVER_ERROR;
+        strcpy(reasonPhrase, "Internal Server Error");
+        goto cleanup;
+    }
+
+    file_data = render_static_file(file, &len);
+    if (file_data == NULL) {
+        logMessage("failed to read file %s", file_name);
+        statusCode = INTERNAL_SERVER_ERROR;
+        strcpy(reasonPhrase, "Internal Server Error");
+        goto cleanup;
     }
 
     logMessage("SEND");
@@ -255,13 +291,33 @@ void *handle_request(void *client_fd) {
             statusCode, reasonPhrase, VERSION, len,
             fstr); /* Header + a blank line */
 
-    (void)send(client_socket, buffer, strnlen(buffer, BUFFER_SIZE), 0);
+    ssize_t header_sent = send(client_socket, buffer, strnlen(buffer, BUFFER_SIZE), 0);
+    if (header_sent < 0) {
+        logMessage("Failed to send header");
+        goto cleanup;
+    }
 
-    (void)send(client_socket, file_data, len, 0);
+    ssize_t body_sent = send(client_socket, file_data, len, 0);
+    if (body_sent < 0) {
+        logMessage("Failed to send body");
+        goto cleanup;
+    }
 
-    sleep(1); /* allow socket to drain before signalling the socket is closed */
-    close(client_socket);
-    free(file_data);
+cleanup:
+    if (file != NULL && file_data == NULL) {
+        // Only close if render_static_file hasn't already closed it
+        fclose(file);
+    }
+    if (file_data != NULL) {
+        free(file_data);
+    }
+    if (client_socket >= 0) {
+        close(client_socket);
+    }
+    if (client_fd != NULL) {
+        free(client_fd);
+    }
+    sleep(1); /* allow socket to drain after closing */
     return NULL;
 }
 
