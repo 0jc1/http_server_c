@@ -9,11 +9,12 @@
 #include <netdb.h> // for getnameinfo()
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
+#include <errno.h>
 
 // Socket headers
 #include <sys/stat.h>
 #include <sys/types.h>
-
 #include <arpa/inet.h>
 
 #include "server.h"
@@ -78,29 +79,6 @@ void logMessage(const char *format, ...) {
     strftime(time_str, sizeof(time_str), "[%H:%M:%S]", tm);
 
     printf("%s %s\n", time_str, buf);
-
-    // output to log file
-    /*
-    int fd = open("server.log", O_WRONLY | O_APPEND | O_CREAT | O_NONBLOCK,
-    S_IRUSR | S_IWUSR);
-
-    if (fd == -1)
-    {
-        perror("Error opening file");
-        return;
-    }
-    char newline = '\n';
-    write(fd, &newline, 1); // write new line
-
-    ssize_t bytesWritten = write(fd, time_str, strlen(time_str));
-    if (bytesWritten == -1)
-    {
-        perror("Error writing to file");
-    }
-
-    // Close the log file
-    close(fd);
-    */
 }
 
 void cleanup(int sig) {
@@ -215,20 +193,34 @@ void *handle_request(void *client_fd) {
         buffer[0] = 0;
         goto cleanup;  // Buffer overflow protection
     }
+    
+    if (total_read >= BUFFER_SIZE - 1) {
+        logMessage("Request too large");
+        return NULL;
+    }
 
+    // Parse request method
     if (strncmp(buffer, "GET ", 4) && strncmp(buffer, "get ", 4)) {
         logMessage("Only simple GET operation supported");
         goto cleanup;
     }
-    // null terminate after the second space to ignore extra stuff
-    for (i = 4; i < BUFFER_SIZE; i++) {
-        if (buffer[i] == ' ') {
-            buffer[i] = 0;
-            break;
-        }
-    }
 
-    logMessage("read request %s", buffer);
+    // Parse request line
+    char *eol = strstr(buffer, "\r\n");
+    if (!eol) {
+        logMessage("Invalid HTTP request format - no CRLF");
+        return NULL;
+    }
+    *eol = '\0';  // Temporarily terminate at end of first line
+
+
+    // Find HTTP version
+    char *http_ver = strstr(buffer + 4, " HTTP/");
+    if (!http_ver) {
+        logMessage("Invalid HTTP request format - no HTTP version");
+        return NULL;
+    }
+    *http_ver = '\0';  // Terminate at end of path
 
     /* check for illegal parent directory use .. */
     if (strstr(buffer, "..")) {
@@ -251,19 +243,12 @@ void *handle_request(void *client_fd) {
     if (dotPosition != NULL) {
         extension = dotPosition + 1;
     }
+    const char *fstr = getMimeType(extension);
 
-    fstr = getMimeType(extension);
-
-    if (fstr == 0) {
-        logMessage("file extension type not supported.");
-        statusCode = UNSUPPORTED_MEDIA_TYPE;
-        strcpy(reasonPhrase, "Unsupported Media Type");
-    }
-
-    char *file_name = &buffer[5];
-
-    if (!file_exists(file_name)) {
-        logMessage("failed to find file %s", file_name);
+    // Try to open the requested file
+    FILE *file = fopen(file_name, "rb");  // Open in binary mode
+    if (file == NULL) {
+        logMessage("failed to find file in directory %s", file_name);
         statusCode = NOT_FOUND;
         strcpy(reasonPhrase, "Not Found");
     }
@@ -284,7 +269,7 @@ void *handle_request(void *client_fd) {
         goto cleanup;
     }
 
-    logMessage("SEND");
+    // Format and send HTTP response headers
     snprintf(buffer, BUFFER_SIZE,
             "HTTP/1.1 %d %s\r\nServer: nweb/%d.0\r\nContent-Length: "
             "%ld\r\nConnection: close\r\nContent-Type: %s\r\n\r\n",
@@ -347,23 +332,48 @@ int main(int argc, char *argv[]) {
     int port = DEFAULT_PORT;
     char *docroot = "docroot";
 
-    // Parse the port number and doc root from the command-line argument
-    if (argc >= 2) {
+    // Parse the port number and doc root from the command-line arguments
+    if (argc == 3) {
+        // Both port and docroot provided
         port = atoi(argv[1]);
-    }
-
-    if (argc >= 3) {
         docroot = argv[2];
-        if (chdir(docroot) == -1) {
-            (void)printf("Error: Can't Change to directory %s\n", docroot);
-            exit(4);
-        }
-    }
-
-    if (docroot == NULL) {
-        printf("Error: docroot is null\n");
+    } else if (argc != 1) {
+        printf("Usage: %s [port] [docroot]\n", argv[0]);
+        printf("  port: Port number (default: 8080)\n");
+        printf("  docroot: Document root directory (default: docroot)\n");
         exit(EXIT_FAILURE);
     }
+
+    // Get current working directory
+    char cwd[1024];
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+        perror("getcwd() error");
+        exit(EXIT_FAILURE);
+    }
+    printf("Starting directory: %s\n", cwd);
+    
+    // Build absolute path to docroot
+    char abs_docroot[1024];
+    if (docroot[0] == '/') {
+        strncpy(abs_docroot, docroot, sizeof(abs_docroot) - 1);
+    } else {
+        snprintf(abs_docroot, sizeof(abs_docroot), "%s/%s", cwd, docroot);
+    }
+    printf("Document root: %s\n", abs_docroot);
+    
+    // Verify docroot exists
+    struct stat st;
+    if (stat(abs_docroot, &st) == -1 || !S_ISDIR(st.st_mode)) {
+        printf("Error: Document root %s is not a directory\n", abs_docroot);
+        exit(EXIT_FAILURE);
+    }
+    
+    // Change to docroot directory
+    if (chdir(abs_docroot) == -1) {
+        printf("Error: Can't change to directory %s\n", abs_docroot);
+        exit(EXIT_FAILURE);
+    }
+    printf("Changed to directory: %s\n", abs_docroot);
 
     if (port <= 0 || port > 49151) {
         printf("Invalid port number: %s\n", argv[1]);
