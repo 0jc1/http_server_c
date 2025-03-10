@@ -276,17 +276,11 @@ void *handle_request(void *client_fd) {
             statusCode, reasonPhrase, VERSION, len,
             fstr); /* Header + a blank line */
 
-    ssize_t header_sent = send(client_socket, buffer, strnlen(buffer, BUFFER_SIZE), 0);
-    if (header_sent < 0) {
-        logMessage("Failed to send header");
-        goto cleanup;
-    }
+    // send headers
+    send(client_socket, buffer, strnlen(buffer, BUFFER_SIZE), 0);
+    // send body
+    send(client_socket, file_data, len, 0);
 
-    ssize_t body_sent = send(client_socket, file_data, len, 0);
-    if (body_sent < 0) {
-        logMessage("Failed to send body");
-        goto cleanup;
-    }
 
 cleanup:
     if (file != NULL && file_data == NULL) {
