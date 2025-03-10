@@ -350,8 +350,7 @@ int main(int argc, char *argv[]) {
         perror("getcwd() error");
         exit(EXIT_FAILURE);
     }
-    printf("Starting directory: %s\n", cwd);
-    
+
     // Build absolute path to docroot
     char abs_docroot[1024];
     if (docroot[0] == '/') {
@@ -373,7 +372,6 @@ int main(int argc, char *argv[]) {
         printf("Error: Can't change to directory %s\n", abs_docroot);
         exit(EXIT_FAILURE);
     }
-    printf("Changed to directory: %s\n", abs_docroot);
 
     if (port <= 0 || port > 49151) {
         printf("Invalid port number: %s\n", argv[1]);
