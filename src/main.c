@@ -281,6 +281,7 @@ void *handle_request(void *client_fd) {
     // send body
     send(client_socket, file_data, len, 0);
 
+    goto cleanup;
 
 cleanup:
     if (file != NULL && file_data == NULL) {
