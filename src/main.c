@@ -176,8 +176,8 @@ void *handle_request(void *client_fd) {
     char reasonPhrase[100] = "OK";
     char *file_data = NULL;
     FILE *file = NULL;
-    size_t i = 0;
     long len = 0;
+    char *request_path = NULL;
 
     // read client request
     int ret = read(client_socket, buffer, BUFFER_SIZE - 1);
@@ -193,11 +193,6 @@ void *handle_request(void *client_fd) {
         buffer[0] = 0;
         goto cleanup;  // Buffer overflow protection
     }
-    
-    if (total_read >= BUFFER_SIZE - 1) {
-        logMessage("Request too large");
-        return NULL;
-    }
 
     // Parse request method
     if (strncmp(buffer, "GET ", 4) && strncmp(buffer, "get ", 4)) {
@@ -209,53 +204,58 @@ void *handle_request(void *client_fd) {
     char *eol = strstr(buffer, "\r\n");
     if (!eol) {
         logMessage("Invalid HTTP request format - no CRLF");
-        return NULL;
+        goto cleanup;
     }
     *eol = '\0';  // Temporarily terminate at end of first line
-
 
     // Find HTTP version
     char *http_ver = strstr(buffer + 4, " HTTP/");
     if (!http_ver) {
         logMessage("Invalid HTTP request format - no HTTP version");
-        return NULL;
+        goto cleanup;
     }
     *http_ver = '\0';  // Terminate at end of path
 
+    // Get request path (skip "GET ")
+    request_path = buffer + 4;
+
     /* check for illegal parent directory use .. */
-    if (strstr(buffer, "..")) {
+    if (strstr(request_path, "..")) {
         logMessage("Parent directory (..) path names not supported");
         statusCode = FORBIDDEN;
         strcpy(reasonPhrase, "Forbidden");
     }
 
-    // TODO show files in a directory
-    if (!strncmp(&buffer[0], "GET /\0", 6) || !strncmp(&buffer[0], "get /\0",6)) /* expand no filename to index file */
-        strcpy(buffer, "GET /index.html");
+    // Default to index.html for root path
+    if (strcmp(request_path, "/") == 0) {
+        request_path = "/index.html";
+    }
 
     /* work out the file type and check if it's supported */
-    const char *fstr = (char *)0;
-    char *extension = 0;
-
-    // Find the position of the dot
-    char *dotPosition = strchr(&buffer[4], '.');
-
+    char *extension = NULL;
+    char *dotPosition = strrchr(request_path, '.');
     if (dotPosition != NULL) {
         extension = dotPosition + 1;
     }
-    const char *fstr = getMimeType(extension);
 
-    // Try to open the requested file
-    FILE *file = fopen(file_name, "rb");  // Open in binary mode
-    if (file == NULL) {
-        logMessage("failed to find file in directory %s", file_name);
+    const char *fstr = getMimeType(extension);
+    if (fstr == NULL) {
+        logMessage("file extension type not supported");
+        statusCode = UNSUPPORTED_MEDIA_TYPE;
+        strcpy(reasonPhrase, "Unsupported Media Type");
+    }
+
+    // Skip leading '/' in path
+    char *file_path = request_path + 1;
+    if (!file_exists(file_path)) {
+        logMessage("failed to find file %s", file_path);
         statusCode = NOT_FOUND;
         strcpy(reasonPhrase, "Not Found");
     }
 
-    file = get_file(file_name, statusCode);
+    file = get_file(file_path, statusCode);
     if (file == NULL) {
-        logMessage("failed to open file %s", file_name);
+        logMessage("failed to open file %s", file_path);
         statusCode = INTERNAL_SERVER_ERROR;
         strcpy(reasonPhrase, "Internal Server Error");
         goto cleanup;
@@ -263,7 +263,7 @@ void *handle_request(void *client_fd) {
 
     file_data = render_static_file(file, &len);
     if (file_data == NULL) {
-        logMessage("failed to read file %s", file_name);
+        logMessage("failed to read file %s", file_path);
         statusCode = INTERNAL_SERVER_ERROR;
         strcpy(reasonPhrase, "Internal Server Error");
         goto cleanup;
