@@ -6,6 +6,7 @@ This project is a lightweight, minimal, prototype HTTP server written in POSIX C
 - No dependencies
 - HTTP/1.0/1.1 support
 - Multi-threaded
+- No GNU extensions
 
 ## Usage
 
