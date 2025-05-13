@@ -19,6 +19,9 @@
 
 #include "server.h"
 
+// For strncasecmp, getnameinfo, etc.
+#define _POSIX_C_SOURCE 200809L  
+
 #define VERSION 23
 #define DEFAULT_PORT 8080
 #define BUFFER_SIZE 8096
