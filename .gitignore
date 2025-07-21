@@ -1,4 +1,9 @@
 server.log
 bin/server
+server
 bin/client
+client
 .vscode
+
+geminid-master
+concurrency-webserver

@@ -19,7 +19,7 @@ void init_server(HTTP_Server *http_server, int port) {
         0             // Protocol: 0 because there is a single protocol for the specified family
     );
 
-    if (server_socket == 0) {
+    if (server_socket <= 0) {
         perror("Socket creation failed");
         exit(EXIT_FAILURE);
     }

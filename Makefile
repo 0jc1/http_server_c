@@ -7,12 +7,10 @@ CLIENT_SRC = src/client.c
 
 all: server client
 
-server: bin/server
-bin/server: $(SERVER_SRC)
+server: $(SERVER_SRC)
 	$(CC) $(CFLAGS) -pthread $^ -o $@
 
-client: bin/client
-bin/client: $(CLIENT_SRC)
+client: $(CLIENT_SRC)
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
