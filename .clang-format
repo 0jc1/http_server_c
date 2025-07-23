@@ -1,0 +1,3 @@
+BasedOnStyle: llvm
+BreakBeforeBraces: Attach
+IndentWidth: 4
