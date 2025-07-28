@@ -8,6 +8,38 @@
 
 #define MAXBUF (8192)
 
+enum HttpStatusCode {
+    OK = 200,
+    CREATED = 201,
+    ACCEPTED = 202,
+    NO_CONTENT = 204,
+    BAD_REQUEST = 400,
+    UNAUTHORIZED = 401,
+    FORBIDDEN = 403,
+    NOT_FOUND = 404,
+    UNSUPPORTED_MEDIA_TYPE = 415,
+    INTERNAL_SERVER_ERROR = 500,
+    NOT_IMPLEMENTED = 501,
+    SERVICE_UNAVAILABLE = 503
+};
+
+struct MimeType {
+    char *extension;
+    char *type;
+} mimeTypes[] = {{"gif", "image/gif"},
+                 {"jpg", "image/jpeg"},
+                 {"jpeg", "image/jpeg"},
+                 {"png", "image/png"},
+                 {"css", "text/css"},
+                 {"ico", "image/x-icon"},
+                 {"zip", "application/zip"},
+                 {"gz", "application/gzip"},
+                 {"tar", "application/x-tar"},
+                 {"htm", "text/html"},
+                 {"html", "text/html"},
+                 {"txt", "text/plain"},
+                 {NULL, NULL}};
+
 void request_error(int fd, char *cause, char *errnum, char *shortmsg,
                    char *longmsg) {
     char buf[MAXBUF], body[MAXBUF];
@@ -97,6 +129,21 @@ void request_get_filetype(char *filename, char *filetype) {
         strcpy(filetype, "text/plain");
 }
 
+
+// Function to get MIME type based on file extension
+const char *getMimeType(const char *fileExtension) {
+    if (fileExtension == NULL) {
+        return "application/octet-stream";
+    }
+
+    for (int i = 0; mimeTypes[i].extension != NULL; i++) {
+        if (strcasecmp(fileExtension, mimeTypes[i].extension) == 0) {
+            return mimeTypes[i].type;
+        }
+    }
+    return "application/octet-stream"; // Default MIME type
+}
+
 void request_serve_dynamic(int fd, char *filename, char *cgiargs) {
     char buf[MAXBUF], *argv[] = {NULL};
 
@@ -104,7 +151,7 @@ void request_serve_dynamic(int fd, char *filename, char *cgiargs) {
     // The CGI script has to finish writing out the header.
     sprintf(buf, ""
                  "HTTP/1.0 200 OK\r\n"
-                 "Server: OSTEP WebServer\r\n");
+                 "Server: nweb\r\n");
 
     write_or_die(fd, buf, strlen(buf));
 
@@ -135,7 +182,7 @@ void request_serve_static(int fd, char *filename, int filesize) {
     sprintf(buf,
             ""
             "HTTP/1.0 200 OK\r\n"
-            "Server: OSTEP WebServer\r\n"
+            "Server: nweb\r\n"
             "Content-Length: %d\r\n"
             "Content-Type: %s\r\n\r\n",
             filesize, filetype);
@@ -148,7 +195,8 @@ void request_serve_static(int fd, char *filename, int filesize) {
 }
 
 // handle a request
-void request_handle(int fd) {
+void *handle_request(void *arg_fd) {
+    int fd = *((int *)arg_fd);
     int is_static;
     struct stat sbuf;
     char buf[MAXBUF], method[MAXBUF], uri[MAXBUF], version[MAXBUF];
@@ -158,11 +206,12 @@ void request_handle(int fd) {
     readline_or_die(fd, buf, MAXBUF);
     sscanf(buf, "%s %s %s", method, uri, version);
     printf("method:%s uri:%s version:%s\n", method, uri, version);
+    printf("filename: %s\n", filename);
 
     if (strcasecmp(method, "GET")) {
         request_error(fd, method, "501", "Not Implemented",
                       "server does not implement this method");
-        return 0;
+        return (void*)0;
     }
     request_read_headers(fd);
 
@@ -170,23 +219,23 @@ void request_handle(int fd) {
     if (stat(filename, &sbuf) < 0) {
         request_error(fd, filename, "404", "Not Found",
                       "server could not find this file");
-        return 0;
+        return (void*)0;
     }
 
     if (is_static) {
         if (!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode)) {
             request_error(fd, filename, "403", "Forbidden",
                           "server could not read this file");
-            return 0;
+            return (void*)0;
         }
         request_serve_static(fd, filename, sbuf.st_size);
     } else {
         if (!(S_ISREG(sbuf.st_mode)) || !(S_IXUSR & sbuf.st_mode)) {
             request_error(fd, filename, "403", "Forbidden",
                           "server could not run this CGI program");
-            return 0;
+            return (void*)0;
         }
         request_serve_dynamic(fd, filename, cgiargs);
     }
-    return 0;
+    return (void*)0;
 }

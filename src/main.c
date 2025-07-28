@@ -26,53 +26,7 @@
 #define VERSION 23
 #define DEFAULT_PORT 8080
 
-struct MimeType {
-    char *extension;
-    char *type;
-} mimeTypes[] = {{"gif", "image/gif"},
-                 {"jpg", "image/jpeg"},
-                 {"jpeg", "image/jpeg"},
-                 {"png", "image/png"},
-                 {"css", "text/css"},
-                 {"ico", "image/x-icon"},
-                 {"zip", "application/zip"},
-                 {"gz", "application/gzip"},
-                 {"tar", "application/x-tar"},
-                 {"htm", "text/html"},
-                 {"html", "text/html"},
-                 {"txt", "text/plain"},
-                 {NULL, NULL}};
-
-enum HttpStatusCode {
-    OK = 200,
-    CREATED = 201,
-    ACCEPTED = 202,
-    NO_CONTENT = 204,
-    BAD_REQUEST = 400,
-    UNAUTHORIZED = 401,
-    FORBIDDEN = 403,
-    NOT_FOUND = 404,
-    UNSUPPORTED_MEDIA_TYPE = 415,
-    INTERNAL_SERVER_ERROR = 500,
-    NOT_IMPLEMENTED = 501,
-    SERVICE_UNAVAILABLE = 503
-};
-
 HTTP_Server http_server;
-
-// Function to get MIME type based on file extension
-const char *getMimeType(const char *fileExtension) {
-    if (fileExtension == NULL) {
-        return "application/octet-stream";
-    }
-
-    for (int i = 0; mimeTypes[i].extension != NULL; i++) {
-        if (strcasecmp(fileExtension, mimeTypes[i].extension) == 0) {
-            return mimeTypes[i].type;
-        }
-    }
-    return "application/octet-stream"; // Default MIME type
-}
 
 void logMessage(const char *format, ...) {
     va_list arg;
@@ -101,138 +55,6 @@ void cleanup(int sig) {
 
     exit(EXIT_SUCCESS);
 }
-
-// void *handle_request(void *client_fd) {
-//     int client_socket = *((int *)client_fd);
-//     char buffer[BUFFER_SIZE] = {0};
-//     enum HttpStatusCode statusCode = OK;
-//     char reasonPhrase[100] = "OK";
-//     char *file_data = NULL;
-//     FILE *file = NULL;
-//     long len = 0;
-//     char *request_path = NULL;
-
-//     // read client request
-//     int ret = read(client_socket, buffer, BUFFER_SIZE - 1);
-
-//     if (ret == 0 || ret == -1) {
-//         logMessage("failed to read client request");
-//         goto cleanup;
-//     }
-
-//     if (ret > 0 && ret < BUFFER_SIZE) {
-//         buffer[ret] = 0;
-//     } else {
-//         buffer[0] = 0;
-//         goto cleanup;  // Buffer overflow protection
-//     }
-
-//     // Parse request method
-//     if (strncmp(buffer, "GET ", 4) && strncmp(buffer, "get ", 4)) {
-//         logMessage("Only simple GET operation supported");
-//         goto cleanup;
-//     }
-
-//     // Parse request line
-//     char *eol = strstr(buffer, "\r\n");
-//     if (!eol) {
-//         logMessage("Invalid HTTP request format - no CRLF");
-//         goto cleanup;
-//     }
-//     *eol = '\0';  // Temporarily terminate at end of first line
-
-//     // Find HTTP version
-//     char *http_ver = strstr(buffer + 4, " HTTP/");
-//     if (!http_ver) {
-//         logMessage("Invalid HTTP request format - no HTTP version");
-//         goto cleanup;
-//     }
-//     *http_ver = '\0';  // Terminate at end of path
-
-//     // Get request path (skip "GET ")
-//     request_path = buffer + 4;
-
-//     /* check for illegal parent directory use .. */
-//     if (strstr(request_path, "..")) {
-//         logMessage("Parent directory (..) path names not supported");
-//         statusCode = FORBIDDEN;
-//         strcpy(reasonPhrase, "Forbidden");
-//     }
-
-//     // Default to index.html for root path
-//     if (strcmp(request_path, "/") == 0) {
-//         request_path = "/index.html";
-//     }
-
-//     /* work out the file type and check if it's supported */
-//     char *extension = NULL;
-//     char *dotPosition = strrchr(request_path, '.');
-//     if (dotPosition != NULL) {
-//         extension = dotPosition + 1;
-//     }
-
-//     const char *fstr = getMimeType(extension);
-//     if (fstr == NULL) {
-//         logMessage("file extension type not supported");
-//         statusCode = UNSUPPORTED_MEDIA_TYPE;
-//         strcpy(reasonPhrase, "Unsupported Media Type");
-//     }
-
-//     // Skip leading '/' in path
-//     char *file_path = request_path + 1;
-//     if (!file_exists(file_path)) {
-//         logMessage("failed to find file %s", file_path);
-//         statusCode = NOT_FOUND;
-//         strcpy(reasonPhrase, "Not Found");
-//     }
-
-//     file = get_file(file_path, statusCode);
-//     if (file == NULL) {
-//         logMessage("failed to open file %s", file_path);
-//         statusCode = INTERNAL_SERVER_ERROR;
-//         strcpy(reasonPhrase, "Internal Server Error");
-//         goto cleanup;
-//     }
-
-//     file_data = render_static_file(file, &len);
-//     if (file_data == NULL) {
-//         logMessage("failed to read file %s", file_path);
-//         statusCode = INTERNAL_SERVER_ERROR;
-//         strcpy(reasonPhrase, "Internal Server Error");
-//         goto cleanup;
-//     }
-
-//     // Format and send HTTP response headers
-//     snprintf(buffer, BUFFER_SIZE,
-//             "HTTP/1.1 %d %s\r\nServer: nweb/%d.0\r\nContent-Length: "
-//             "%ld\r\nConnection: close\r\nContent-Type: %s\r\n\r\n",
-//             statusCode, reasonPhrase, VERSION, len,
-//             fstr); /* Header + a blank line */
-
-//     // send headers
-//     send(client_socket, buffer, strnlen(buffer, BUFFER_SIZE), 0);
-//     // send body
-//     send(client_socket, file_data, len, 0);
-
-//     goto cleanup;
-
-// cleanup:
-//     if (file != NULL && file_data == NULL) {
-//         // Only close if render_static_file hasn't already closed it
-//         fclose(file);
-//     }
-//     if (file_data != NULL) {
-//         free(file_data);
-//     }
-//     if (client_socket >= 0) {
-//         close(client_socket);
-//     }
-//     if (client_fd != NULL) {
-//         free(client_fd);
-//     }
-//     sleep(1); /* allow socket to drain after closing */
-//     return NULL;
-// }
 
 // Custom report function
 void report(struct sockaddr_in *serverAddress) {
@@ -269,6 +91,7 @@ int main(int argc, char *argv[]) {
             break;
         case 't':
             threads = atoi(optarg);
+            break;
         default:
             printf("Usage: %s [-d docroot] [-p port] [-t threads]\n", argv[0]);
             printf("  port: Port number (default: 8080)\n");
