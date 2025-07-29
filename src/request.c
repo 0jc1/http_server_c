@@ -26,18 +26,18 @@ enum HttpStatusCode {
 struct MimeType {
     char *extension;
     char *type;
-} mimeTypes[] = {{"gif", "image/gif"},
-                 {"jpg", "image/jpeg"},
-                 {"jpeg", "image/jpeg"},
-                 {"png", "image/png"},
-                 {"css", "text/css"},
-                 {"ico", "image/x-icon"},
-                 {"zip", "application/zip"},
-                 {"gz", "application/gzip"},
-                 {"tar", "application/x-tar"},
-                 {"htm", "text/html"},
-                 {"html", "text/html"},
-                 {"txt", "text/plain"},
+} mimeTypes[] = {{".gif", "image/gif"},
+                 {".jpg", "image/jpeg"},
+                 {".jpeg", "image/jpeg"},
+                 {".png", "image/png"},
+                 {".css", "text/css"},
+                 {".ico", "image/x-icon"},
+                 {".zip", "application/zip"},
+                 {".gz", "application/gzip"},
+                 {".tar", "application/x-tar"},
+                 {".htm", "text/html"},
+                 {".html", "text/html"},
+                 {".txt", "text/plain"},
                  {NULL, NULL}};
 
 void request_error(int fd, char *cause, char *errnum, char *shortmsg,
@@ -115,33 +115,21 @@ int request_parse_uri(char *uri, char *filename, char *cgiargs) {
     }
 }
 
-//
-// Fills in the filetype given the filename
-//
-void request_get_filetype(char *filename, char *filetype) {
-    if (strstr(filename, ".html"))
-        strcpy(filetype, "text/html");
-    else if (strstr(filename, ".gif"))
-        strcpy(filetype, "image/gif");
-    else if (strstr(filename, ".jpg"))
-        strcpy(filetype, "image/jpeg");
-    else
-        strcpy(filetype, "text/plain");
-}
-
 
 // Function to get MIME type based on file extension
-const char *getMimeType(const char *fileExtension) {
+void getMimeType(const char *fileExtension, char* filetype) {
     if (fileExtension == NULL) {
-        return "application/octet-stream";
+        strcpy(filetype, "application/octet-stream");
+        return;
     }
 
     for (int i = 0; mimeTypes[i].extension != NULL; i++) {
-        if (strcasecmp(fileExtension, mimeTypes[i].extension) == 0) {
-            return mimeTypes[i].type;
+        if (strstr(fileExtension, mimeTypes[i].extension)) {
+            strcpy(filetype, mimeTypes[i].type);
+            return;
         }
     }
-    return "application/octet-stream"; // Default MIME type
+    strcpy(filetype, "application/octet-stream"); // Default MIME type
 }
 
 void request_serve_dynamic(int fd, char *filename, char *cgiargs) {
@@ -170,7 +158,7 @@ void request_serve_static(int fd, char *filename, int filesize) {
     int srcfd;
     char *srcp, filetype[MAXBUF], buf[MAXBUF];
 
-    request_get_filetype(filename, filetype);
+    getMimeType(filename, filetype);
     srcfd = open_or_die(filename, O_RDONLY, 0);
 
     // Rather than call read() to read the file into memory,
