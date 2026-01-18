@@ -78,12 +78,25 @@ void request_error(int fd, char *cause, char *errnum, char *shortmsg,
 //
 void request_read_headers(int fd) {
     char buf[MAXBUF];
+    int lines = 0;
 
-    readline_or_die(fd, buf, MAXBUF);
-    while (strcmp(buf, "\r\n")) {
-        readline_or_die(fd, buf, MAXBUF);
+    // Read the first header line
+    if (readline(fd, buf, MAXBUF) <= 0) {
+        // client closed or read error
+        return;
     }
-    return;
+
+    while (strcmp(buf, "\r\n") != 0) {
+        lines++;
+        if (lines >= 200) {
+            return;
+        }
+
+        if (readline(fd, buf, MAXBUF) <= 0) {
+            // client closed or read error mid-headers
+            return;
+        }
+    }
 }
 
 //
@@ -193,8 +206,8 @@ void *handle_request(void *arg_fd) {
     // parse first line
     readline_or_die(fd, buf, MAXBUF);
     sscanf(buf, "%s %s %s", method, uri, version);
-    printf("method:%s uri:%s version:%s\n", method, uri, version);
-    printf("filename: %s\n", filename);
+    // printf("method:%s uri:%s version:%s\n", method, uri, version);
+    // printf("filename: %s\n", filename);
 
     if (strcasecmp(method, "GET")) {
         request_error(fd, method, "501", "Not Implemented",

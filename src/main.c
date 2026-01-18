@@ -151,7 +151,7 @@ void report(struct sockaddr_in *serverAddress) {
 // Main function
 int main(int argc, char *argv[]) {
     int port = DEFAULT_PORT;
-    int threads = 10;
+    int threads = 2;
     char *docroot = "docroot";
     int c;
 
@@ -224,7 +224,7 @@ int main(int argc, char *argv[]) {
     signal(SIGPIPE, SIG_IGN);
 
     // Initialize thread pool and connection buffer
-    buffer_init(&connection_buffer, threads*2);
+    buffer_init(&connection_buffer, threads*10);
     thread_pool_size = threads;
     worker_threads = malloc(threads * sizeof(pthread_t));
     
@@ -245,8 +245,8 @@ int main(int argc, char *argv[]) {
         }
         
         logMessage("Connection accepted from %s:%d", 
-                   inet_ntoa(client_address.sin_addr),
-                   ntohs(client_address.sin_port));
+                  inet_ntoa(client_address.sin_addr),
+                  ntohs(client_address.sin_port));
 
         // Add connection to buffer
         buffer_put(&connection_buffer, client_fd);
