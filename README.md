@@ -25,9 +25,14 @@ Start the server
 cd bin
 ./server <port> <path/to/docroot>
 ```
+
+## Benchmarks
+
+Local benchmarking was done using `ab` (ApacheBench) on the same machine.
+
+The server (running with 2 worker threads) averages 12k requests per second. In comparison, python's http.server averages 130 requests per second.
+
 ## References
 https://dev-notes.eu/2018/06/http-server-in-c/
 
 https://notes.eatonphil.com/web-server-basics-http-and-sockets.html
-
-
